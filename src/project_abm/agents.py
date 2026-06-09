@@ -56,6 +56,13 @@ class SchellingAgent(CellAgent):
         )
 
         return similar_count / len(neighbors)
+        self.radius = radius
+        self.happy = False
+
+    def change_reputation(self) -> None:
+        """Update the agent's homophily based on a new reputation value."""
+        self.homophily = random.randint(0, 8) / 8
+        print(f"Agent {self.unique_id} homophily changed to {self.homophily}", flush=True)
 
     def assign_state(self) -> None:
         """Update whether the agent is satisfied with its current location."""
@@ -103,6 +110,7 @@ class SchellingAgent(CellAgent):
 
     def step(self) -> None:
         """Attempt relocation when dissatisfied."""
+        # Move if unhappy
         if not self.happy:
             self.model.move_attempts += 1
             self.attempt_move()

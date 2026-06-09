@@ -7,7 +7,9 @@ from mesa.discrete_space import OrthogonalMooreGrid
 from .acceptance import SigmoidSimilarityAcceptance
 from .agents import SchellingAgent
 from .neighbourhoods import MooreNeighborhood
+from mesa.experimental.scenarios import Scenario
 
+from .agents import SchellingAgent
 
 class GentrificationModel(Model):
     def __init__(
@@ -159,6 +161,7 @@ class GentrificationModel(Model):
         self.rejected_moves = 0
 
         # Agents act in a random order.
+        self.agents.shuffle_do("change_reputation")  # Change all agents homophily in random order
         self.agents.shuffle_do("step")
 
         # Evaluate satisfaction after all movement attempts.

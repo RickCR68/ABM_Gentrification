@@ -2,6 +2,8 @@ import os
 
 import solara
 
+from src.project_abm.model import Schelling, SchellingScenario
+
 from mesa.visualization import (
     Slider,
     SolaraViz,
@@ -40,8 +42,9 @@ def agent_portrayal(agent):
     style = AgentPortrayalStyle(
         x=agent.cell.coordinate[0],
         y=agent.cell.coordinate[1],
-        size=150,
         zorder=2,
+        marker=os.path.join(path, "resources", "dog-solid.png"),
+        size=80,
     )
 
     if agent.type == 0:
