@@ -18,9 +18,14 @@ class SchellingAgent(CellAgent):
         super().__init__(model)
         self.cell = cell
         self.type = agent_type
-        self.homophily = random.uniform(0, 1)
+        self.homophily = homophily
         self.radius = radius
         self.happy = False
+
+    def change_reputation(self) -> None:
+        """Update the agent's homophily based on a new reputation value."""
+        self.homophily = random.randint(0, 8) / 8
+        print(f"Agent {self.unique_id} homophily changed to {self.homophily}", flush=True)
 
     def assign_state(self) -> None:
         """Determine if agent is happy and move if necessary."""
@@ -43,7 +48,6 @@ class SchellingAgent(CellAgent):
             self.model.happy += 1
 
     def step(self) -> None:
-        self.homophily = random.uniform(0, 1)
         # Move if unhappy
         if not self.happy:
             self.cell = self.model.grid.select_random_empty_cell()

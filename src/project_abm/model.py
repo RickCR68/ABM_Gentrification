@@ -1,9 +1,9 @@
 from mesa import Model
 from mesa.datacollection import DataCollector
 from mesa.discrete_space import OrthogonalMooreGrid
-from mesa.examples.basic.schelling.agents import SchellingAgent
 from mesa.experimental.scenarios import Scenario
 
+from .agents import SchellingAgent
 
 class SchellingScenario(Scenario):
     """Scenario for the Schelling model.
@@ -89,7 +89,9 @@ class Schelling(Model):
 
     def step(self):
         """Run one step of the model."""
+        print("--- MODEL STEP RUNNING ---", flush=True)
         self.happy = 0  # Reset counter of happy agents
+        self.agents.shuffle_do("change_reputation")  # Change all agents homophily in random order
         self.agents.shuffle_do("step")  # Activate all agents in random order
         self.agents.do("assign_state")
         self.datacollector.collect(self)  # Collect data

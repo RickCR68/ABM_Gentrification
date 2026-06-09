@@ -2,7 +2,8 @@ import os
 import mesa
 import solara
 
-from mesa.examples.basic.schelling.model import Schelling, SchellingScenario
+from src.project_abm.model import Schelling, SchellingScenario
+
 from mesa.visualization import (
     Slider,
     SolaraViz,
@@ -25,7 +26,7 @@ def agent_portrayal(agent):
         x=agent.cell.coordinate[0],
         y=agent.cell.coordinate[1],
         marker=os.path.join(path, "resources", "dog-solid.png"),
-        size=agent.homophily * 1_000,
+        size=80,
     )
     if agent.type == 0:
         if agent.happy:
@@ -41,7 +42,7 @@ def agent_portrayal(agent):
                     "marker",
                     os.path.join(path, "resources", "cat-solid-sad.png"),
                 ),
-                ("size", agent.homophily * 1_000),
+                ("size", 80 + 80 * agent.homophily),  # Size reflects homophily
                 ("zorder", 2),
             )
     else:
@@ -51,7 +52,7 @@ def agent_portrayal(agent):
                     "marker",
                     os.path.join(path, "resources", "dog-solid-sad.png"),
                 ),
-                ("size", agent.homophily * 1_000),
+                ("size", 80 + 80 * agent.homophily),  # Size reflects homophily
                 ("zorder", 2),
             )
 
