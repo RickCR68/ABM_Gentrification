@@ -3,8 +3,8 @@ name = "abm-gentrification"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.14"
 dependencies = [
-    "mesa[networkx,rec,viz]>=2.4.0",
+    "mesa[rec,viz]>=3",
     "pandas>=2.3.3",
 ]
