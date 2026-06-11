@@ -2,7 +2,7 @@ import os
 
 import solara
 
-from src.project_abm.model import Schelling, SchellingScenario
+from src.project.model import GentrificationModel
 
 from mesa.visualization import (
     Slider,
@@ -11,9 +11,6 @@ from mesa.visualization import (
     make_plot_component,
 )
 from mesa.visualization.components import AgentPortrayalStyle
-
-from project_abm.model import GentrificationModel
-
 
 def get_model_statistics(model):
     """Display current movement and happiness statistics."""
@@ -33,40 +30,28 @@ def get_model_statistics(model):
         """
     )
 
-
 path = os.path.dirname(os.path.abspath(__file__))
-
 
 def agent_portrayal(agent):
     """Define how an agent is displayed."""
+    r = int((1 - agent.type) * 255)
+    b = int(agent.type * 255)
+    hex_color = f"#{r:02x}00{b:02x}"
+
     style = AgentPortrayalStyle(
         x=agent.cell.coordinate[0],
         y=agent.cell.coordinate[1],
-        zorder=2,
-        marker=os.path.join(path, "resources", "dog-solid.png"),
+        color=hex_color,
+        marker='x',
         size=80,
+        zorder=2,
     )
 
-    if agent.type == 0:
-        marker = (
-            "cat-solid.png"
-            if agent.happy
-            else "cat-solid-sad.png"
+    if agent.happy:
+        style.update(
+            ("zorder", 3),
+            ("marker", 'o'),
         )
-    else:
-        marker = (
-            "dog-solid.png"
-            if agent.happy
-            else "dog-solid-sad.png"
-        )
-
-    style.update(
-        (
-            "marker",
-            os.path.join(path, "resources", marker),
-        )
-    )
-
     return style
 
 
@@ -132,10 +117,10 @@ model_params = {
         max=1.0,
         step=0.05,
     ),
-    "width": 20,
-    "height": 20,
+    "alike_neighbors": Slider("Similar neighbors needed", 3, 0, 8, 1),
+    "width": 25,
+    "height": 25,
 }
-
 
 model = GentrificationModel(
     width=20,
