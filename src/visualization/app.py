@@ -2,7 +2,7 @@ import os
 import mesa
 import solara
 
-from src.project_abm.model import Schelling, SchellingScenario
+from src.project.model import Schelling, SchellingScenario
 
 from mesa.visualization import (
     Slider,
@@ -22,54 +22,37 @@ path = os.path.dirname(os.path.abspath(__file__))
 
 
 def agent_portrayal(agent):
+    r = int((1 - agent.type) * 255)
+    b = int(agent.type * 255)
+    hex_color = f"#{r:02x}00{b:02x}"
+
     style = AgentPortrayalStyle(
         x=agent.cell.coordinate[0],
         y=agent.cell.coordinate[1],
-        marker=os.path.join(path, "resources", "dog-solid.png"),
-        size=80,
+        color=hex_color,
+        marker='x',
+        size=60,
     )
-    if agent.type == 0:
-        if agent.happy:
-            style.update(
-                (
-                    "marker",
-                    os.path.join(path, "resources", "cat-solid.png"),
-                ),
-            )
-        else:
-            style.update(
-                (
-                    "marker",
-                    os.path.join(path, "resources", "cat-solid-sad.png"),
-                ),
-                ("size", 80 + 80 * agent.homophily),  # Size reflects homophily
-                ("zorder", 2),
-            )
-    else:
-        if not agent.happy:
-            style.update(
-                (
-                    "marker",
-                    os.path.join(path, "resources", "dog-solid-sad.png"),
-                ),
-                ("size", 80 + 80 * agent.homophily),  # Size reflects homophily
-                ("zorder", 2),
-            )
 
+    if agent.happy:
+        style.update(
+            ("zorder", 3),
+            ("marker", 'o'),
+        )
     return style
 
 
 model_params = {
     "rng": {
         "type": "InputText",
-        "value": 42,
+        "value": 67,
         "label": "Random Seed",
     },
-    "density": Slider("Agent density", 0.8, 0.1, 1.0, 0.1),
-    "minority_pc": Slider("Fraction minority", 0.2, 0.0, 1.0, 0.05),
-    "homophily": Slider("Homophily", 0.4, 0.0, 1.0, 0.125),
-    "width": 20,
-    "height": 20,
+    "density": Slider("Agent density", 0.4, 0.1, 1.0, 0.1),
+    "minority_pc": Slider("Fraction minority", 0.5, 0.0, 1.0, 0.05),
+    "alike_neighbors": Slider("Similar neighbors needed", 3, 0, 8, 1),
+    "width": 25,
+    "height": 25,
 }
 
 # Note: Models with images as markers are very performance intensive.

@@ -13,16 +13,16 @@ class SchellingScenario(Scenario):
         height: Height of the grid
         density: Initial chance for a cell to be populated (0-1)
         minority_pc: Chance for an agent to be in minority class (0-1)
-        homophily: Minimum number of similar neighbors needed for happiness
+        alike_neighbors: Minimum number of similar neighbors needed for happiness
         radius: Search radius for checking neighbor similarity
         rng: Seed for reproducibility
     """
 
-    height: int = 20
-    width: int = 20
-    density: float = 0.8
+    height: int = 25
+    width: int = 25
+    density: float = 0.4
     minority_pc: float = 0.5
-    homophily: float = 0.4
+    alike_neighbors: int = 3
     radius: int = 1
 
 
@@ -43,7 +43,7 @@ class Schelling(Model):
         # Model parameters
         self.density = scenario.density
         self.minority_pc = scenario.minority_pc
-
+        self.alike_neighbors = scenario.alike_neighbors
         # Initialize grid
         self.grid = OrthogonalMooreGrid(
             (scenario.width, scenario.height), random=self.random, capacity=1
@@ -74,12 +74,12 @@ class Schelling(Model):
         # Create agents and place them on the grid
         for cell in self.grid.all_cells:
             if self.random.random() < self.density:
-                agent_type = 1 if self.random.random() < scenario.minority_pc else 0
+                agent_type = self.random.random()
                 SchellingAgent(
                     self,
                     cell,
                     agent_type,
-                    homophily=scenario.homophily,
+                    alike_neighbors=scenario.alike_neighbors,
                     radius=scenario.radius,
                 )
 
@@ -89,9 +89,8 @@ class Schelling(Model):
 
     def step(self):
         """Run one step of the model."""
-        print("--- MODEL STEP RUNNING ---", flush=True)
         self.happy = 0  # Reset counter of happy agents
-        self.agents.shuffle_do("change_reputation")  # Change all agents homophily in random order
+        self.agents.shuffle_do("change_reputation") # Change all agents homophily in random order
         self.agents.shuffle_do("step")  # Activate all agents in random order
         self.agents.do("assign_state")
         self.datacollector.collect(self)  # Collect data
