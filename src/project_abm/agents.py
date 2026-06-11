@@ -1,49 +1,110 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from mesa.discrete_space import CellAgent
 
-import random
+if TYPE_CHECKING:
+    from mesa.discrete_space import Cell
+
 
 class SchellingAgent(CellAgent):
-    """Schelling segregation agent."""
+    """Household agent in the residential segregation model."""
 
     def __init__(
-        self, model, cell, agent_type: int, homophily: float = 0.4, radius: int = 1
+        self,
+        model,
+        cell: Cell,
+        agent_type: int,
+        homophily: float = 0.4,
     ) -> None:
-        """Create a new Schelling agent.
-        Args:
-            model: The model instance the agent belongs to
-            agent_type: Indicator for the agent's type (minority=1, majority=0)
-            homophily: Minimum number of similar neighbors needed for happiness
-            radius: Search radius for checking neighbor similarity
-        """
         super().__init__(model)
+
+        if agent_type not in (0, 1):
+            raise ValueError("agent_type must be either 0 or 1.")
+
+        if not 0.0 <= homophily <= 1.0:
+            raise ValueError("homophily must lie between 0 and 1.")
+
         self.cell = cell
         self.type = agent_type
-        self.homophily = random.uniform(0, 1)
-        self.radius = radius
+        self.homophily = homophily
+
         self.happy = False
 
+        # Diagnostic variables for later visualization and analysis.
+        self.current_similarity = 0.0
+        self.last_destination_similarity: float | None = None
+        self.last_acceptance_probability: float | None = None
+        self.last_move_accepted: bool | None = None
+
+    def calculate_similarity(self, cell: Cell | None = None) -> float:
+        """Calculate similarity around the current or supplied cell."""
+        focal_cell = self.cell if cell is None else cell
+
+        neighbors = self.model.neighborhood_definition.get_neighbors(focal_cell)
+
+        # Exclude the agent itself if it appears in the considered region.
+        neighbors = [neighbor for neighbor in neighbors if neighbor is not self]
+
+        if not neighbors:
+            return 0.0
+
+        similar_count = sum(
+            neighbor.type == self.type
+            for neighbor in neighbors
+        )
+
+        return similar_count / len(neighbors)
+
     def assign_state(self) -> None:
-        """Determine if agent is happy and move if necessary."""
-        neighbors = list(self.cell.get_neighborhood(radius=self.radius).agents)
+        """Update whether the agent is satisfied with its current location."""
+        self.current_similarity = self.calculate_similarity()
+        self.happy = self.current_similarity >= self.homophily
 
-        # Count similar neighbors
-        similar_neighbors = len([n for n in neighbors if n.type == self.type])
-
-        # Calculate the fraction of similar neighbors
-        if (valid_neighbors := len(neighbors)) > 0:
-            similarity_fraction = similar_neighbors / valid_neighbors
-        else:
-            # If there are no neighbors, the similarity fraction is 0
-            similarity_fraction = 0.0
-
-        if similarity_fraction < self.homophily:
-            self.happy = False
-        else:
-            self.happy = True
+        if self.happy:
             self.model.happy += 1
 
+    def choose_destination(self) -> Cell | None:
+        """Select a candidate destination.
+
+        For now, this is a random empty cell. This can later be replaced by
+        bounded spatial search, utility maximisation, or a choice model.
+        """
+        if len(self.model.grid.empties) == 0:
+            return None
+
+        return self.model.grid.select_random_empty_cell()
+
+    def attempt_move(self) -> bool:
+        """Apply to a destination and move if the neighbourhood accepts."""
+        destination = self.choose_destination()
+
+        if destination is None:
+            self.last_move_accepted = False
+            return False
+
+        decision = self.model.acceptance_policy.evaluate(
+            agent=self,
+            destination=destination,
+        )
+
+        self.last_destination_similarity = decision.similarity
+        self.last_acceptance_probability = decision.probability
+        self.last_move_accepted = decision.accepted
+
+        if decision.accepted:
+            self.move_to(destination)
+            self.model.successful_moves += 1
+            return True
+
+        self.model.rejected_moves += 1
+        return False
+
     def step(self) -> None:
-        self.homophily = random.uniform(0, 1)
-        # Move if unhappy
+        """Attempt relocation when dissatisfied."""
         if not self.happy:
-            self.cell = self.model.grid.select_random_empty_cell()
+            self.model.move_attempts += 1
+            self.attempt_move()
+
+    

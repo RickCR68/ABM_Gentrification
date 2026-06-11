@@ -1,8 +1,7 @@
 import os
-import mesa
+
 import solara
 
-from mesa.examples.basic.schelling.model import Schelling, SchellingScenario
 from mesa.visualization import (
     Slider,
     SolaraViz,
@@ -11,49 +10,59 @@ from mesa.visualization import (
 )
 from mesa.visualization.components import AgentPortrayalStyle
 
+from project_abm.model import GentrificationModel
 
-def get_happy_agents(model):
-    """Display a text count of how many happy agents there are."""
-    return solara.Markdown(f"**Happy agents: {model.happy}**")
+
+def get_model_statistics(model):
+    """Display current movement and happiness statistics."""
+    acceptance_rate = (
+        model.successful_moves / model.move_attempts
+        if model.move_attempts > 0
+        else 0.0
+    )
+
+    return solara.Markdown(
+        f"""
+        **Happy agents:** {model.happy}  
+        **Move attempts:** {model.move_attempts}  
+        **Accepted moves:** {model.successful_moves}  
+        **Rejected moves:** {model.rejected_moves}  
+        **Acceptance rate:** {acceptance_rate:.2%}
+        """
+    )
 
 
 path = os.path.dirname(os.path.abspath(__file__))
 
 
 def agent_portrayal(agent):
+    """Define how an agent is displayed."""
     style = AgentPortrayalStyle(
         x=agent.cell.coordinate[0],
         y=agent.cell.coordinate[1],
-        marker=os.path.join(path, "resources", "dog-solid.png"),
-        size=agent.homophily * 1_000,
+        size=150,
+        zorder=2,
     )
+
     if agent.type == 0:
-        if agent.happy:
-            style.update(
-                (
-                    "marker",
-                    os.path.join(path, "resources", "cat-solid.png"),
-                ),
-            )
-        else:
-            style.update(
-                (
-                    "marker",
-                    os.path.join(path, "resources", "cat-solid-sad.png"),
-                ),
-                ("size", agent.homophily * 1_000),
-                ("zorder", 2),
-            )
+        marker = (
+            "cat-solid.png"
+            if agent.happy
+            else "cat-solid-sad.png"
+        )
     else:
-        if not agent.happy:
-            style.update(
-                (
-                    "marker",
-                    os.path.join(path, "resources", "dog-solid-sad.png"),
-                ),
-                ("size", agent.homophily * 1_000),
-                ("zorder", 2),
-            )
+        marker = (
+            "dog-solid.png"
+            if agent.happy
+            else "dog-solid-sad.png"
+        )
+
+    style.update(
+        (
+            "marker",
+            os.path.join(path, "resources", marker),
+        )
+    )
 
     return style
 
@@ -62,32 +71,112 @@ model_params = {
     "rng": {
         "type": "InputText",
         "value": 42,
-        "label": "Random Seed",
+        "label": "Random seed",
     },
-    "density": Slider("Agent density", 0.8, 0.1, 1.0, 0.1),
-    "minority_pc": Slider("Fraction minority", 0.2, 0.0, 1.0, 0.05),
-    "homophily": Slider("Homophily", 0.4, 0.0, 1.0, 0.125),
+    "density": Slider(
+        "Agent density",
+        value=0.8,
+        min=0.1,
+        max=0.95,
+        step=0.05,
+    ),
+    "minority_pc": Slider(
+        "Fraction minority",
+        value=0.2,
+        min=0.0,
+        max=1.0,
+        step=0.05,
+    ),
+    "homophily_min": Slider(
+    "Minimum homophily",
+    value=0.2,
+    min=0.0,
+    max=1.0,
+    step=0.05,
+    ),
+    "homophily_max": Slider(
+        "Maximum homophily",
+        value=0.6,
+        min=0.0,
+        max=1.0,
+        step=0.05,
+    ),
+    "neighborhood_radius": Slider(
+        "Neighbourhood radius",
+        value=1,
+        min=1,
+        max=4,
+        step=1,
+    ),
+    "acceptance_midpoint": Slider(
+        "Acceptance similarity midpoint",
+        value=0.5,
+        min=0.0,
+        max=1.0,
+        step=0.05,
+    ),
+    "acceptance_steepness": Slider(
+        "Acceptance steepness",
+        value=10.0,
+        min=0.5,
+        max=30.0,
+        step=0.5,
+    ),
+    "empty_similarity": Slider(
+        "Empty-area similarity",
+        value=0.5,
+        min=0.0,
+        max=1.0,
+        step=0.05,
+    ),
     "width": 20,
     "height": 20,
 }
 
-# Note: Models with images as markers are very performance intensive.
-model1 = Schelling(scenario=SchellingScenario())
-renderer = SpaceRenderer(model1, backend="matplotlib").setup_agents(agent_portrayal)
-# Here we use renderer.render() to render the agents and grid in one go.
-# This function always renders the grid and then renders the agents or
-# property layers on top of it if specified.
+
+model = GentrificationModel(
+    width=20,
+    height=20,
+    density=0.8,
+    minority_pc=0.2,
+    homophily_min=0.2,
+    homophily_max=0.6,
+    neighborhood_radius=1,
+    acceptance_midpoint=0.5,
+    acceptance_steepness=10.0,
+    empty_similarity=0.5,
+    rng=42,
+)
+
+renderer = (
+    SpaceRenderer(model, backend="matplotlib")
+    .setup_agents(agent_portrayal)
+)
+
 renderer.render()
 
-HappyPlot = make_plot_component({"happy": "tab:green"})
+HappyPlot = make_plot_component(
+    {
+        "pct_happy": "tab:green",
+    }
+)
+
+MovementPlot = make_plot_component(
+    {
+        "successful_moves": "tab:blue",
+        "rejected_moves": "tab:red",
+    }
+)
 
 page = SolaraViz(
-    model1,
+    model,
     renderer,
     components=[
         HappyPlot,
-        get_happy_agents,
+        MovementPlot,
+        get_model_statistics,
     ],
     model_params=model_params,
 )
-page  # noqa
+
+page
