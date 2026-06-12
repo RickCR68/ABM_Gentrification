@@ -15,7 +15,7 @@ Consists of making changes to the default Segretation model (included in mesa) a
 > [!NOTE]  
 > modeling parameters and requirements not yet defined
 
-### Parameters:
+### ~Parameters~ Initial Conditions:
 - $N$: Size of grid;
 - a
 
@@ -27,6 +27,6 @@ Consists of making changes to the default Segretation model (included in mesa) a
 # from root folder
 solara run src/visualization/app.py
 # if it doesn't work, try:
-PYTHONPATH=. solara run src/visualization/app.py
+python -m solara run src/visualization/app.py
 # Maybe windows is different, if so, update this readme plz
 ```
