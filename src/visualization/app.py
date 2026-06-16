@@ -22,10 +22,10 @@ def get_model_statistics(model):
 
     return solara.Markdown(
         f"""
-        **Happy agents:** {model.happy}  
-        **Move attempts:** {model.move_attempts}  
-        **Accepted moves:** {model.successful_moves}  
-        **Rejected moves:** {model.rejected_moves}  
+        **Happy agents:** {model.happy}
+        **Move attempts:** {model.move_attempts}
+        **Accepted moves:** {model.successful_moves}
+        **Rejected moves:** {model.rejected_moves}
         **Acceptance rate:** {acceptance_rate:.2%}
         """
     )
@@ -34,8 +34,8 @@ path = os.path.dirname(os.path.abspath(__file__))
 
 def agent_portrayal(agent):
     """Define how an agent is displayed."""
-    r = int((1 - agent.type) * 255)
-    b = int(agent.type * 255)
+    r = int((1 - agent.status) * 255)
+    b = int(agent.status * 255)
     hex_color = f"#{r:02x}00{b:02x}"
 
     style = AgentPortrayalStyle(

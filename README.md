@@ -12,12 +12,23 @@ Consists of making changes to the default Segretation model (included in mesa) a
 
 ## Analysis:
 
-> [!NOTE]  
+> [!NOTE]
 > modeling parameters and requirements not yet defined
 
 ### ~Parameters~ Initial Conditions:
 - $N$: Size of grid;
 - a
+
+#### Agents:
+
+> values up for debate
+
+- Status: float (0 - 1);
+- range of "likeness" for satisfaction: floats (i.e. income - .25 ~ income + .25)
+- is_happy: boolean (if in sats. range => true)
+- **desired neighbourhood size**
+- **radius**: how far you look for a neighbouthood?
+- time spent on current location?
 
 ## Running:
 

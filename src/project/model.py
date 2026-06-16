@@ -21,7 +21,7 @@ class GentrificationModel(Model):
         density: float = 0.8,
         minority_pc: float = 0.2,
         homophily_min: float = 0.2, # lower bound for unfirom dist
-        homophily_max: float = 0.6, # upper bound 
+        homophily_max: float = 0.6, # upper bound
         alike_neighbors: int = 3,
         neighborhood_radius: int = 1,
         acceptance_midpoint: float = 0.5,

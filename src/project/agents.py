@@ -15,38 +15,31 @@ class SchellingAgent(CellAgent):
         self,
         model,
         cell: Cell,
-        agent_type: int,
-        homophily: float = 0.4,
+        status: float,
+#        homophily: float = 0.4,
         alike_neighbors: int = 3,
         radius: int = 1
     ) -> None:
 
-
         """Create a new Schelling agent.
         Args:
             model: The model instance the agent belongs to
-            agent_type: Indicator for the agent's type (minority=1, majority=0)
+            status: The agent's status level
             alike_neighbors: Minimum number of similar neighbors needed for happiness
             radius: Search radius for checking neighbor similarity
         """
-        if agent_type not in (0, 1):
-            raise ValueError("agent_type must be either 0 or 1.")
-
-        if not 0.0 <= homophily <= 1.0:
-            raise ValueError("homophily must lie between 0 and 1.")
 
         super().__init__(model)
         self.cell = cell
-        self.type = agent_type
-        self.homophily = homophily
+        self.status = status
         self.alike_neighbours = alike_neighbors
         self.radius = radius
         self.happy = False
 
     def get_bounds(self):
         """Calculate the lower and upper bounds for neighbor similarity."""
-        self.low_bound = max(0, self.type - .05)
-        self.high_bound = min(1, self.type + .20)
+        self.low_bound = max(0, self.status - .05)
+        self.high_bound = min(1, self.status + .20)
 
         # Diagnostic variables for later visualization and analysis.
         self.current_similarity = 0.0
@@ -67,7 +60,7 @@ class SchellingAgent(CellAgent):
             return 0.0
 
         similar_count = sum(
-            neighbor.type == self.type
+            neighbor.status == self.status
             for neighbor in neighbors
         )
 
@@ -78,10 +71,10 @@ class SchellingAgent(CellAgent):
         if self.happy:
             neighbors = self.get_neighbors()
 
-            reps = [self.type]
+            reps = [self.status]
             for neighbor in neighbors:
-                if neighbor.type > 0:
-                    reps.append(neighbor.type)
+                if neighbor.status > 0:
+                    reps.append(neighbor.status)
 
             size = min(self.alike_neighbours, len(reps))
             reps.sort()

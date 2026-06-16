@@ -11,7 +11,6 @@ if TYPE_CHECKING:
     from agents import SchellingAgent
     from neighbourhoods import NeighborhoodDefinition
 
-
 @dataclass(frozen=True)
 class AcceptanceDecision:
     """Information produced by a neighbourhood acceptance decision."""
@@ -21,7 +20,6 @@ class AcceptanceDecision:
     probability: float
     similarity: float
     neighbor_count: int
-
 
 class AcceptancePolicy(ABC):
     """Interface for neighbourhood acceptance mechanisms."""
@@ -34,8 +32,6 @@ class AcceptancePolicy(ABC):
     ) -> AcceptanceDecision:
         """Evaluate whether an agent is accepted by a destination."""
         raise NotImplementedError
-
-
 
 # for now its just this. later we do game.
 class SigmoidSimilarityAcceptance(AcceptancePolicy):
@@ -107,7 +103,5 @@ class SigmoidSimilarityAcceptance(AcceptancePolicy):
         exponent = max(min(exponent, 700), -700)
 
         return 1.0 / (1.0 + math.exp(exponent))
-    
 
-
-#  Add our masgical game here later. 
+#  Add our magical game here later.
