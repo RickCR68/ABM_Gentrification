@@ -90,7 +90,7 @@ class SigmoidSimilarityAcceptance(AcceptancePolicy):
             return self.empty_similarity
 
         similar_count = sum(
-            resident.type == agent.type
+            resident.income == agent.income
             for resident in residents
         )
 

@@ -86,9 +86,9 @@ class GentrificationModel(Model):
                 "mean_similarity": self._mean_similarity,
             },
             agent_reporters={
-                "type": "type",
+                "income": "income",
                 "happy": "happy",
-                "homophily": "homophily",
+                # "homophily": "homophily",
                 "similarity": "current_similarity",
                 "last_acceptance_probability": (
                     "last_acceptance_probability"
@@ -136,22 +136,16 @@ class GentrificationModel(Model):
             if self.random.random() >= self.density:
                 continue
 
-            agent_type = (
-                1
-                if self.random.random() < self.minority_pc
-                else 0
-            )
-
-            agent_homophily = self.random.uniform(
-                self.homophily_min,
-                self.homophily_max,
-            )
+            # agent_homophily = self.random.uniform(
+            #     self.homophily_min,
+            #     self.homophily_max,
+            # )
 
             SchellingAgent(
                 model=self,
                 cell=cell,
-                agent_type=agent_type,
-                homophily=agent_homophily,
+                income=self.random.random(),
+#                homophily=agent_homophily,
             )
 
     def _update_agent_states(self) -> None:
@@ -167,7 +161,7 @@ class GentrificationModel(Model):
         self.happy = 0
 
         # Agents act in a random order.
-        self.agents.shuffle_do("change_reputation")  # Change all agents homophily in random order
+        self.agents.shuffle_do("change_income")  # Change all agents income in random order
         self.agents.shuffle_do("step")
 
         # Evaluate satisfaction after all movement attempts.

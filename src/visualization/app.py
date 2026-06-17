@@ -3,6 +3,7 @@ import os
 import solara
 
 from src.project.model import GentrificationModel
+from src.utils.helpers import generate_vibrant_red_blue_gradient
 
 from mesa.visualization import (
     Slider,
@@ -34,9 +35,9 @@ path = os.path.dirname(os.path.abspath(__file__))
 
 def agent_portrayal(agent):
     """Define how an agent is displayed."""
-    r = int((1 - agent.status) * 255)
-    b = int(agent.status * 255)
-    hex_color = f"#{r:02x}00{b:02x}"
+    # Map income to a color
+    income_normalized = agent.income  # Assuming income is already between 0 and 1
+    hex_color = generate_vibrant_red_blue_gradient(income_normalized)
 
     style = AgentPortrayalStyle(
         x=agent.cell.coordinate[0],

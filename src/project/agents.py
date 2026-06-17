@@ -34,7 +34,7 @@ class SchellingAgent(CellAgent):
         self.radius = radius
         self.happy = False
 
-    def get_bounds(self):
+    def get_similarity_bounds(self):
         """Calculate the lower and upper bounds for neighbor similarity."""
         self.low_bound = max(0, self.income - .25)
         self.high_bound = min(1, self.income + .25)
@@ -74,7 +74,6 @@ class SchellingAgent(CellAgent):
             size = min(self.alike_neighbours, len(reps))
             reps.sort()
             self.income = sum(reps[:size]) / size
-            print(f"Agent at {self.cell.coordinate} has new income {self.income:.2f}")
 
     def get_neighbors(self, cell: Cell | None = None) -> list[SchellingAgent]:
         """Get neighboring agents within the specified radius."""
@@ -88,7 +87,7 @@ class SchellingAgent(CellAgent):
     def is_happy(self) -> bool:
         """Determine if the agent is happy based on its neighbors."""
         neighbors = self.get_neighbors()
-        self.get_bounds()
+        self.get_similarity_bounds()
         # Count similar neighbors
         similar_neighbors = len([n for n in neighbors if self.low_bound <= n.income <= self.high_bound])
 
