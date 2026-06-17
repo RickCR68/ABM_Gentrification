@@ -7,7 +7,10 @@ from mesa.discrete_space import OrthogonalMooreGrid
 from .acceptance import SigmoidSimilarityAcceptance
 from .agents import SchellingAgent
 from .neighbourhoods import MooreNeighborhood
+from mesa.experimental.scenarios import Scenario
 
+
+from .agents import SchellingAgent
 
 class GentrificationModel(Model):
     def __init__(
@@ -19,6 +22,7 @@ class GentrificationModel(Model):
         minority_pc: float = 0.2,
         homophily_min: float = 0.2, # lower bound for unfirom dist
         homophily_max: float = 0.6, # upper bound 
+        alike_neighbors: int = 3,
         neighborhood_radius: int = 1,
         acceptance_midpoint: float = 0.5,
         acceptance_steepness: float = 10.0,
@@ -36,9 +40,12 @@ class GentrificationModel(Model):
             homophily_max=homophily_max,
         )
 
+
+        # Model parameters
         self.width = width
         self.height = height
         self.density = density
+        self.alike_neighbors = alike_neighbors
         self.minority_pc = minority_pc
 
         self.homophily_min = homophily_min
@@ -148,9 +155,9 @@ class GentrificationModel(Model):
             )
 
     def _update_agent_states(self) -> None:
-        """Recalculate satisfaction for all households."""
-        self.happy = 0
+        # Collect initial state
         self.agents.do("assign_state")
+        self.datacollector.collect(self)
 
     def step(self) -> None:
         """Advance the model by one time step."""
@@ -159,6 +166,7 @@ class GentrificationModel(Model):
         self.rejected_moves = 0
 
         # Agents act in a random order.
+        self.agents.shuffle_do("change_reputation")  # Change all agents homophily in random order
         self.agents.shuffle_do("step")
 
         # Evaluate satisfaction after all movement attempts.
@@ -184,7 +192,4 @@ class GentrificationModel(Model):
         if len(self.agents) == 0:
             return 0.0
 
-        return sum(
-            agent.current_similarity
-            for agent in self.agents
-        ) / len(self.agents)
+        return sum([agent.current_similarity for agent in self.agents]) / len(self.agents)
