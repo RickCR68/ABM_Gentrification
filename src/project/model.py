@@ -29,7 +29,7 @@ class GentrificationModel(Model):
         empty_similarity: float = 0.5,
         rng=None,
     ) -> None:
-        super().__init__(seed=rng)
+        super().__init__(rng=rng)
 
         self._validate_parameters(
             width=width,
@@ -164,6 +164,7 @@ class GentrificationModel(Model):
         self.move_attempts = 0
         self.successful_moves = 0
         self.rejected_moves = 0
+        self.happy = 0
 
         # Agents act in a random order.
         self.agents.shuffle_do("change_reputation")  # Change all agents homophily in random order
