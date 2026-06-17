@@ -6,7 +6,7 @@ from mesa.discrete_space import OrthogonalMooreGrid
 
 from .acceptance import SigmoidSimilarityAcceptance
 from .agents import SchellingAgent
-from .neighbourhoods import MooreNeighborhood
+from .neighborhoods import MooreNeighborhood
 from mesa.experimental.scenarios import Scenario
 
 

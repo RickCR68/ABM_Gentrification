@@ -9,11 +9,11 @@ if TYPE_CHECKING:
     from mesa.discrete_space import Cell
 
     from agents import SchellingAgent
-    from neighbourhoods import NeighborhoodDefinition
+    from neighborhoods import NeighborhoodDefinition
 
 @dataclass(frozen=True)
 class AcceptanceDecision:
-    """Information produced by a neighbourhood acceptance decision."""
+    """Information produced by a neighborhood acceptance decision."""
 
     accepted: bool
     # mostly for later extensions or if we want for graphs for some reason
@@ -22,7 +22,7 @@ class AcceptanceDecision:
     neighbor_count: int
 
 class AcceptancePolicy(ABC):
-    """Interface for neighbourhood acceptance mechanisms."""
+    """Interface for neighborhood acceptance mechanisms."""
 
     @abstractmethod
     def evaluate(
@@ -42,7 +42,7 @@ class SigmoidSimilarityAcceptance(AcceptancePolicy):
         neighborhood: NeighborhoodDefinition,
         midpoint: float = 0.5, # the similarity at which acceptance probability is 0.5
         steepness: float = 10.0, # how quickly probability changes around midpoint
-        empty_similarity: float = 0.5, # prob for when neighbourhood is empty
+        empty_similarity: float = 0.5, # prob for when neighborhood is empty
     ) -> None:
         if not 0.0 <= midpoint <= 1.0:
             raise ValueError("midpoint must lie between 0 and 1.")

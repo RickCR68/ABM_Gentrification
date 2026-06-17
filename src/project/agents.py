@@ -62,7 +62,7 @@ class SchellingAgent(CellAgent):
         return similar_count / len(neighbors)
 
     def change_income(self) -> None:
-        """Change the agent's income based on its Neighbourhood."""
+        """Change the agent's income based on its neighborhood."""
         if self.happy:
             neighbors = self.get_neighbors()
 
@@ -114,7 +114,7 @@ class SchellingAgent(CellAgent):
         return self.model.grid.select_random_empty_cell()
 
     def attempt_move(self) -> bool:
-        """Apply to a destination and move if the neighbourhood accepts."""
+        """Apply to a destination and move if the neighborhood accepts."""
         destination = self.choose_destination()
 
         if destination is None:

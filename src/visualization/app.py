@@ -90,7 +90,7 @@ model_params = {
         step=0.05,
     ),
     "neighborhood_radius": Slider(
-        "Neighbourhood radius",
+        "neighborhood radius",
         value=1,
         min=1,
         max=4,
