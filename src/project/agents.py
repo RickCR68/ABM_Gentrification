@@ -15,31 +15,30 @@ class SchellingAgent(CellAgent):
         self,
         model,
         cell: Cell,
-        status: float,
+        income: float,
 #        homophily: float = 0.4,
         alike_neighbors: int = 3,
         radius: int = 1
     ) -> None:
-
         """Create a new Schelling agent.
         Args:
             model: The model instance the agent belongs to
-            status: The agent's status level
+            income: The agent's income level
             alike_neighbors: Minimum number of similar neighbors needed for happiness
-            radius: Search radius for checking neighbor similarity
+            radius: Search radius for checking neighbor similarity ('layers')
         """
 
         super().__init__(model)
         self.cell = cell
-        self.status = status
+        self.income = income
         self.alike_neighbours = alike_neighbors
         self.radius = radius
         self.happy = False
 
     def get_bounds(self):
         """Calculate the lower and upper bounds for neighbor similarity."""
-        self.low_bound = max(0, self.status - .05)
-        self.high_bound = min(1, self.status + .20)
+        self.low_bound = max(0, self.income - .25)
+        self.high_bound = min(1, self.income + .25)
 
         # Diagnostic variables for later visualization and analysis.
         self.current_similarity = 0.0
@@ -60,7 +59,7 @@ class SchellingAgent(CellAgent):
             return 0.0
 
         similar_count = sum(
-            neighbor.status == self.status
+            neighbor.income == self.income
             for neighbor in neighbors
         )
 
@@ -71,10 +70,10 @@ class SchellingAgent(CellAgent):
         if self.happy:
             neighbors = self.get_neighbors()
 
-            reps = [self.status]
+            reps = [self.income]
             for neighbor in neighbors:
-                if neighbor.status > 0:
-                    reps.append(neighbor.status)
+                if neighbor.income > 0:
+                    reps.append(neighbor.income)
 
             size = min(self.alike_neighbours, len(reps))
             reps.sort()
@@ -90,7 +89,7 @@ class SchellingAgent(CellAgent):
         neighbors = self.get_neighbors()
         self.get_bounds()
         # Count similar neighbors
-        similar_neighbors = len([n for n in neighbors if self.low_bound <= n.type <= self.high_bound])
+        similar_neighbors = len([n for n in neighbors if self.low_bound <= n.income <= self.high_bound])
 
         return similar_neighbors >= self.alike_neighbours
 
