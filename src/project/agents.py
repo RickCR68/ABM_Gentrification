@@ -7,10 +7,9 @@ from mesa.discrete_space import CellAgent
 if TYPE_CHECKING:
     from mesa.discrete_space import Cell
 
-import random
-
 class SchellingAgent(CellAgent):
     """Household agent in the residential segregation model."""
+
     def __init__(
         self,
         model,
@@ -20,7 +19,7 @@ class SchellingAgent(CellAgent):
         alike_neighbors: int = 3,
         radius: int = 1
     ) -> None:
-        """Create a new Schelling agent.
+        """Create a new (customized) Schelling agent.
         Args:
             model: The model instance the agent belongs to
             income: The agent's income level
@@ -50,10 +49,7 @@ class SchellingAgent(CellAgent):
         """Calculate similarity around the current or supplied cell."""
         focal_cell = self.cell if cell is None else cell
 
-        neighbors = self.model.neighborhood_definition.get_neighbors(focal_cell)
-
-        # Exclude the agent itself if it appears in the considered region.
-        neighbors = [neighbor for neighbor in neighbors if neighbor is not self]
+        neighbors = self.get_neighbors(focal_cell)
 
         if not neighbors:
             return 0.0
@@ -65,8 +61,8 @@ class SchellingAgent(CellAgent):
 
         return similar_count / len(neighbors)
 
-    def change_reputation(self) -> None:
-        """Change the agent's reputation based on its type."""
+    def change_income(self) -> None:
+        """Change the agent's income based on its Neighbourhood."""
         if self.happy:
             neighbors = self.get_neighbors()
 
@@ -77,12 +73,17 @@ class SchellingAgent(CellAgent):
 
             size = min(self.alike_neighbours, len(reps))
             reps.sort()
-            self.type = sum(reps[:size]) / size
-            print(f"Agent at {self.cell.coordinate} has new type {self.type:.2f}")
+            self.income = sum(reps[:size]) / size
+            print(f"Agent at {self.cell.coordinate} has new income {self.income:.2f}")
 
-    def get_neighbors(self):
+    def get_neighbors(self, cell: Cell | None = None) -> list[SchellingAgent]:
         """Get neighboring agents within the specified radius."""
-        return list(self.cell.get_neighborhood(radius=self.radius).agents)
+        focal_cell = self.cell if cell is None else cell
+
+        neighbors = self.model.neighborhood_definition.get_neighbors(focal_cell)
+        neighbors = [neighbor for neighbor in neighbors if neighbor is not self]
+
+        return neighbors
 
     def is_happy(self) -> bool:
         """Determine if the agent is happy based on its neighbors."""
