@@ -41,3 +41,9 @@ solara run src/visualization/app.py
 python -m solara run src/visualization/app.py
 # Maybe windows is different, if so, update this readme plz
 ```
+
+## Simulation Steps
+
+### Initialize Grid
+### 
+### Initialize Grid
