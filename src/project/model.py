@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import random
+import numpy as np
+
 from mesa import Model
 from mesa.datacollection import DataCollector
 from mesa.discrete_space import OrthogonalMooreGrid
+from mesa.discrete_space import PropertyLayer
 
 from .acceptance import SigmoidSimilarityAcceptance
 from .agents import SchellingAgent
@@ -53,7 +57,7 @@ class GentrificationModel(Model):
 
         self.grid = OrthogonalMooreGrid(
             dimensions=(width, height),
-            torus=False,
+            torus=True,
             capacity=1,
             random=self.random,
         )
@@ -62,6 +66,14 @@ class GentrificationModel(Model):
         self.neighborhood_definition = MooreNeighborhood(
             radius=neighborhood_radius
         )
+
+        # Rent Layer
+        self.grid.create_property_layer(
+            name='rent',
+            default_value=0.5,
+            dtype=float,
+        )
+        self.grid.rent.modify_cells(lambda cell: self.random.uniform(0.0, 1.0))
 
         self.acceptance_policy = SigmoidSimilarityAcceptance(
             neighborhood=self.neighborhood_definition,
@@ -97,6 +109,23 @@ class GentrificationModel(Model):
         )
 
         self._create_agents()
+        for agent in self.agents[:5]:  # Print the first 5 agents for debugging
+            print(f"Created agent with income {agent.income:.2f}")
+
+        neighborhood_incomes = [[0.0] * self.grid.dimensions[1] for _ in range(self.grid.dimensions[0])]
+        for cell in self.grid.all_cells:
+            neighbors = self.neighborhood_definition.get_neighbors(cell)
+            mean_neighbor_income = np.mean([neighbor.income for neighbor in neighbors]) if neighbors else 0.0
+            print(f"Cell has {len(neighbors)} neighbors with mean income {mean_neighbor_income:.2f}")
+            neighborhood_incomes[cell.coordinate[0]][cell.coordinate[1]] = mean_neighbor_income
+
+        neighborhood_incomes = np.array(neighborhood_incomes)  # Convert to numpy array for easier handling
+        self.grid.add_property_layer(
+            PropertyLayer.from_data('mean_neighbor_income', neighborhood_incomes)
+        )
+        for income in self.grid.mean_neighbor_income.data:
+            print(income)
+
         self._update_agent_states()
         self.datacollector.collect(self)
 
