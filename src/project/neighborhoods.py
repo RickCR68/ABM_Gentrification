@@ -6,18 +6,16 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from mesa.discrete_space import Cell
 
-
 class NeighborhoodDefinition(ABC):
-    """Determines which agents belong to a neighbourhood."""
+    """Determines which agents belong to a neighborhood."""
 
     @abstractmethod
     def get_neighbors(self, cell: Cell) -> list:
-        """Return the agents living in the given neighbourhood."""
+        """Return the agents living in the given neighborhood."""
         raise NotImplementedError
 
-
 class MooreNeighborhood(NeighborhoodDefinition):
-    """A Moore neighbourhood."""
+    """A Moore neighborhood."""
 
     def __init__(self, radius: int = 1) -> None:
         if radius < 1:
@@ -28,6 +26,5 @@ class MooreNeighborhood(NeighborhoodDefinition):
     def get_neighbors(self, cell: Cell) -> list:
         neighborhood = cell.get_neighborhood(radius=self.radius)
         return list(neighborhood.agents)
-    
 
-# Possible other neighbourhoods here depending on what we want?
+# Possible other neighborhoods here depending on what we want?

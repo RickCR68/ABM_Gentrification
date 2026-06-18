@@ -7,46 +7,37 @@ from mesa.discrete_space import CellAgent
 if TYPE_CHECKING:
     from mesa.discrete_space import Cell
 
-import random
-
 class SchellingAgent(CellAgent):
     """Household agent in the residential segregation model."""
+
     def __init__(
         self,
         model,
         cell: Cell,
-        agent_type: int,
-        homophily: float = 0.4,
+        income: float,
+#        homophily: float = 0.4,
         alike_neighbors: int = 3,
         radius: int = 1
     ) -> None:
-
-
-        """Create a new Schelling agent.
+        """Create a new (customized) Schelling agent.
         Args:
             model: The model instance the agent belongs to
-            agent_type: Indicator for the agent's type (minority=1, majority=0)
+            income: The agent's income level
             alike_neighbors: Minimum number of similar neighbors needed for happiness
-            radius: Search radius for checking neighbor similarity
+            radius: Search radius for checking neighbor similarity ('layers')
         """
-        if agent_type not in (0, 1):
-            raise ValueError("agent_type must be either 0 or 1.")
-
-        if not 0.0 <= homophily <= 1.0:
-            raise ValueError("homophily must lie between 0 and 1.")
 
         super().__init__(model)
         self.cell = cell
-        self.type = agent_type
-        self.homophily = homophily
+        self.income = income
         self.alike_neighbours = alike_neighbors
         self.radius = radius
         self.happy = False
 
-    def get_bounds(self):
+    def get_similarity_bounds(self):
         """Calculate the lower and upper bounds for neighbor similarity."""
-        self.low_bound = max(0, self.type - .05)
-        self.high_bound = min(1, self.type + .20)
+        self.low_bound = max(0, self.income - .25)
+        self.high_bound = min(1, self.income + .25)
 
         # Diagnostic variables for later visualization and analysis.
         self.current_similarity = 0.0
@@ -58,46 +49,47 @@ class SchellingAgent(CellAgent):
         """Calculate similarity around the current or supplied cell."""
         focal_cell = self.cell if cell is None else cell
 
-        neighbors = self.model.neighborhood_definition.get_neighbors(focal_cell)
-
-        # Exclude the agent itself if it appears in the considered region.
-        neighbors = [neighbor for neighbor in neighbors if neighbor is not self]
+        neighbors = self.get_neighbors(focal_cell)
 
         if not neighbors:
             return 0.0
 
         similar_count = sum(
-            neighbor.type == self.type
+            neighbor.income == self.income
             for neighbor in neighbors
         )
 
         return similar_count / len(neighbors)
 
-    def change_reputation(self) -> None:
-        """Change the agent's reputation based on its type."""
+    def change_income(self) -> None:
+        """Change the agent's income based on its neighborhood."""
         if self.happy:
             neighbors = self.get_neighbors()
 
-            reps = [self.type]
+            reps = [self.income]
             for neighbor in neighbors:
-                if neighbor.type > 0:
-                    reps.append(neighbor.type)
+                if neighbor.income > 0:
+                    reps.append(neighbor.income)
 
             size = min(self.alike_neighbours, len(reps))
             reps.sort()
-            self.type = sum(reps[:size]) / size
-            print(f"Agent at {self.cell.coordinate} has new type {self.type:.2f}")
+            self.income = sum(reps[:size]) / size
 
-    def get_neighbors(self):
+    def get_neighbors(self, cell: Cell | None = None) -> list[SchellingAgent]:
         """Get neighboring agents within the specified radius."""
-        return list(self.cell.get_neighborhood(radius=self.radius).agents)
+        focal_cell = self.cell if cell is None else cell
+
+        neighbors = self.model.neighborhood_definition.get_neighbors(focal_cell)
+        neighbors = [neighbor for neighbor in neighbors if neighbor is not self]
+
+        return neighbors
 
     def is_happy(self) -> bool:
         """Determine if the agent is happy based on its neighbors."""
         neighbors = self.get_neighbors()
-        self.get_bounds()
+        self.get_similarity_bounds()
         # Count similar neighbors
-        similar_neighbors = len([n for n in neighbors if self.low_bound <= n.type <= self.high_bound])
+        similar_neighbors = len([n for n in neighbors if self.low_bound <= n.income <= self.high_bound])
 
         return similar_neighbors >= self.alike_neighbours
 
@@ -121,7 +113,7 @@ class SchellingAgent(CellAgent):
         return self.model.grid.select_random_empty_cell()
 
     def attempt_move(self) -> bool:
-        """Apply to a destination and move if the neighbourhood accepts."""
+        """Apply to a destination and move if the neighborhood accepts."""
         destination = self.choose_destination()
 
         if destination is None:

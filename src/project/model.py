@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import random
+import numpy as np
+
 from mesa import Model
 from mesa.datacollection import DataCollector
 from mesa.discrete_space import OrthogonalMooreGrid
+from mesa.discrete_space import PropertyLayer
 
 from .acceptance import SigmoidSimilarityAcceptance
 from .agents import SchellingAgent
-from .neighbourhoods import MooreNeighborhood
+from .neighborhoods import MooreNeighborhood
 from mesa.experimental.scenarios import Scenario
 
 
@@ -21,7 +25,7 @@ class GentrificationModel(Model):
         density: float = 0.8,
         minority_pc: float = 0.2,
         homophily_min: float = 0.2, # lower bound for unfirom dist
-        homophily_max: float = 0.6, # upper bound 
+        homophily_max: float = 0.6, # upper bound
         alike_neighbors: int = 3,
         neighborhood_radius: int = 1,
         acceptance_midpoint: float = 0.5,
@@ -53,7 +57,7 @@ class GentrificationModel(Model):
 
         self.grid = OrthogonalMooreGrid(
             dimensions=(width, height),
-            torus=False,
+            torus=True,
             capacity=1,
             random=self.random,
         )
@@ -62,6 +66,14 @@ class GentrificationModel(Model):
         self.neighborhood_definition = MooreNeighborhood(
             radius=neighborhood_radius
         )
+
+        # Rent Layer
+        self.grid.create_property_layer(
+            name='rent',
+            default_value=0.5,
+            dtype=float,
+        )
+        self.grid.rent.modify_cells(lambda cell: self.random.uniform(0.0, 1.0))
 
         self.acceptance_policy = SigmoidSimilarityAcceptance(
             neighborhood=self.neighborhood_definition,
@@ -86,9 +98,9 @@ class GentrificationModel(Model):
                 "mean_similarity": self._mean_similarity,
             },
             agent_reporters={
-                "type": "type",
+                "income": "income",
                 "happy": "happy",
-                "homophily": "homophily",
+                # "homophily": "homophily",
                 "similarity": "current_similarity",
                 "last_acceptance_probability": (
                     "last_acceptance_probability"
@@ -97,6 +109,23 @@ class GentrificationModel(Model):
         )
 
         self._create_agents()
+        for agent in self.agents[:5]:  # Print the first 5 agents for debugging
+            print(f"Created agent with income {agent.income:.2f}")
+
+        neighborhood_incomes = [[0.0] * self.grid.dimensions[1] for _ in range(self.grid.dimensions[0])]
+        for cell in self.grid.all_cells:
+            neighbors = self.neighborhood_definition.get_neighbors(cell)
+            mean_neighbor_income = np.mean([neighbor.income for neighbor in neighbors]) if neighbors else 0.0
+            print(f"Cell has {len(neighbors)} neighbors with mean income {mean_neighbor_income:.2f}")
+            neighborhood_incomes[cell.coordinate[0]][cell.coordinate[1]] = mean_neighbor_income
+
+        neighborhood_incomes = np.array(neighborhood_incomes)  # Convert to numpy array for easier handling
+        self.grid.add_property_layer(
+            PropertyLayer.from_data('mean_neighbor_income', neighborhood_incomes)
+        )
+        for income in self.grid.mean_neighbor_income.data:
+            print(income)
+
         self._update_agent_states()
         self.datacollector.collect(self)
 
@@ -136,22 +165,16 @@ class GentrificationModel(Model):
             if self.random.random() >= self.density:
                 continue
 
-            agent_type = (
-                1
-                if self.random.random() < self.minority_pc
-                else 0
-            )
-
-            agent_homophily = self.random.uniform(
-                self.homophily_min,
-                self.homophily_max,
-            )
+            # agent_homophily = self.random.uniform(
+            #     self.homophily_min,
+            #     self.homophily_max,
+            # )
 
             SchellingAgent(
                 model=self,
                 cell=cell,
-                agent_type=agent_type,
-                homophily=agent_homophily,
+                income=self.random.random(),
+#                homophily=agent_homophily,
             )
 
     def _update_agent_states(self) -> None:
@@ -167,7 +190,7 @@ class GentrificationModel(Model):
         self.happy = 0
 
         # Agents act in a random order.
-        self.agents.shuffle_do("change_reputation")  # Change all agents homophily in random order
+        self.agents.shuffle_do("change_income")  # Change all agents income in random order
         self.agents.shuffle_do("step")
 
         # Evaluate satisfaction after all movement attempts.

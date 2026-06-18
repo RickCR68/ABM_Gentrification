@@ -4,20 +4,31 @@
 
 Consists of making changes to the default Segretation model (included in mesa) and evaluating how these might impact the model's stability or time to stability, and maybe seeing if these introduce dynamics like genrifiaction. The main changes include:
 
-1. Changing from binary 'blue/red' groups to a gradient of values, and having neighbourhoods be defined by likeness;
-2. Introducing a neighbourhood "aproval" before an agent's move;
+1. Changing from binary 'blue/red' groups to a gradient of values, and having neighborhoods be defined by likeness;
+2. Introducing a neighborhood "aproval" before an agent's move;
 3. ...
 
 ## (Provisory) Work division:
 
 ## Analysis:
 
-> [!NOTE]  
+> [!NOTE]
 > modeling parameters and requirements not yet defined
 
 ### ~Parameters~ Initial Conditions:
 - $N$: Size of grid;
 - a
+
+#### Agents:
+
+> values up for debate
+
+- Status: float (0 - 1);
+- range of "likeness" for satisfaction: floats (i.e. income - .25 ~ income + .25)
+- is_happy: boolean (if in sats. range => true)
+- **desired neighborhood size**
+- **radius**: how far you look for a neighbouthood?
+- time spent on current location?
 
 ## Running:
 
@@ -30,3 +41,9 @@ solara run src/visualization/app.py
 python -m solara run src/visualization/app.py
 # Maybe windows is different, if so, update this readme plz
 ```
+
+## Simulation Steps
+
+### Initialize Grid
+###
+### Initialize Grid

@@ -3,6 +3,7 @@ import os
 import solara
 
 from src.project.model import GentrificationModel
+from src.utils.helpers import generate_vibrant_red_blue_gradient
 
 from mesa.visualization import (
     Slider,
@@ -22,10 +23,10 @@ def get_model_statistics(model):
 
     return solara.Markdown(
         f"""
-        **Happy agents:** {model.happy}  
-        **Move attempts:** {model.move_attempts}  
-        **Accepted moves:** {model.successful_moves}  
-        **Rejected moves:** {model.rejected_moves}  
+        **Happy agents:** {model.happy}
+        **Move attempts:** {model.move_attempts}
+        **Accepted moves:** {model.successful_moves}
+        **Rejected moves:** {model.rejected_moves}
         **Acceptance rate:** {acceptance_rate:.2%}
         """
     )
@@ -34,9 +35,9 @@ path = os.path.dirname(os.path.abspath(__file__))
 
 def agent_portrayal(agent):
     """Define how an agent is displayed."""
-    r = int((1 - agent.type) * 255)
-    b = int(agent.type * 255)
-    hex_color = f"#{r:02x}00{b:02x}"
+    # Map income to a color
+    income_normalized = agent.income  # Assuming income is already between 0 and 1
+    hex_color = generate_vibrant_red_blue_gradient(income_normalized)
 
     style = AgentPortrayalStyle(
         x=agent.cell.coordinate[0],
@@ -90,7 +91,7 @@ model_params = {
         step=0.05,
     ),
     "neighborhood_radius": Slider(
-        "Neighbourhood radius",
+        "neighborhood radius",
         value=1,
         min=1,
         max=4,
@@ -125,7 +126,7 @@ model_params = {
 model = GentrificationModel(
     width=20,
     height=20,
-    density=0.8,
+    density=0.2,
     minority_pc=0.2,
     homophily_min=0.2,
     homophily_max=0.6,
