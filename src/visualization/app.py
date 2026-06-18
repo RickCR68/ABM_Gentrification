@@ -54,6 +54,13 @@ def agent_portrayal(agent):
         )
     return style
 
+def post_process(ax):
+    fig = ax.figure
+
+    fig.set_size_inches(5.2, 3.8)
+    fig.tight_layout()
+    # ax.set_box_aspect(0.6)  # consistent visual ratio
+
 
 model_params = {
     "rng": {
@@ -118,8 +125,8 @@ model_params = {
         step=0.05,
     ),
     "alike_neighbors": Slider("Similar neighbors needed", 3, 0, 8, 1),
-    "width": 25,
-    "height": 25,
+    "width": 20,
+    "height": 20,
 }
 
 model = GentrificationModel(
@@ -136,24 +143,25 @@ model = GentrificationModel(
     rng=42,
 )
 
-renderer = (
-    SpaceRenderer(model, backend="matplotlib")
-    .setup_agents(agent_portrayal)
-)
+renderer = SpaceRenderer(model, backend="matplotlib")
+renderer.setup_agents(agent_portrayal)
+renderer.post_process = post_process
+
+
 
 renderer.render()
 
 HappyPlot = make_plot_component(
-    {
-        "pct_happy": "tab:green",
-    }
+    {"pct_happy": "tab:green"},
+    post_process=post_process,
 )
 
 MovementPlot = make_plot_component(
     {
         "successful_moves": "tab:blue",
         "rejected_moves": "tab:red",
-    }
+    },
+    post_process=post_process,
 )
 
 page = SolaraViz(
@@ -166,5 +174,3 @@ page = SolaraViz(
     ],
     model_params=model_params,
 )
-
-page
