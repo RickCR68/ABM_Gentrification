@@ -9,11 +9,12 @@ if TYPE_CHECKING:
     from mesa.discrete_space import Cell
 
     from agents import SchellingAgent
-    from neighborhoods import NeighborhoodDefinition
+    from neighbourhoods import NeighborhoodDefinition
+
 
 @dataclass(frozen=True)
 class AcceptanceDecision:
-    """Information produced by a neighborhood acceptance decision."""
+    """Information produced by a neighbourhood acceptance decision."""
 
     accepted: bool
     # mostly for later extensions or if we want for graphs for some reason
@@ -21,8 +22,9 @@ class AcceptanceDecision:
     similarity: float
     neighbor_count: int
 
+
 class AcceptancePolicy(ABC):
-    """Interface for neighborhood acceptance mechanisms."""
+    """Interface for neighbourhood acceptance mechanisms."""
 
     @abstractmethod
     def evaluate(
@@ -33,6 +35,8 @@ class AcceptancePolicy(ABC):
         """Evaluate whether an agent is accepted by a destination."""
         raise NotImplementedError
 
+
+
 # for now its just this. later we do game.
 class SigmoidSimilarityAcceptance(AcceptancePolicy):
     """Accept agents probabilistically according to local similarity."""
@@ -42,7 +46,7 @@ class SigmoidSimilarityAcceptance(AcceptancePolicy):
         neighborhood: NeighborhoodDefinition,
         midpoint: float = 0.5, # the similarity at which acceptance probability is 0.5
         steepness: float = 10.0, # how quickly probability changes around midpoint
-        empty_similarity: float = 0.5, # prob for when neighborhood is empty
+        empty_similarity: float = 0.5, # prob for when neighbourhood is empty
     ) -> None:
         if not 0.0 <= midpoint <= 1.0:
             raise ValueError("midpoint must lie between 0 and 1.")
@@ -90,7 +94,7 @@ class SigmoidSimilarityAcceptance(AcceptancePolicy):
             return self.empty_similarity
 
         similar_count = sum(
-            resident.income == agent.income
+            resident.type == agent.type
             for resident in residents
         )
 
@@ -103,5 +107,11 @@ class SigmoidSimilarityAcceptance(AcceptancePolicy):
         exponent = max(min(exponent, 700), -700)
 
         return 1.0 / (1.0 + math.exp(exponent))
+    
 
-#  Add our magical game here later.
+
+#  Add our masgical game here later. 
+
+class GameAcceptance(AcceptancePolicy):
+    """ Game-based acceptance policy """
+        
