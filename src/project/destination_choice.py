@@ -124,8 +124,8 @@ class RandomSatisficingChoice(DestinationChoicePolicy):
                 math.isinf(agent.current_utility)
                 and agent.current_utility < 0.0
             ):
-                utility_improvement = math.inf
-            elif not math.isfinite(utility_improvement):
+                value_improvement = math.inf
+            elif not math.isfinite(value_improvement):
                 continue
 
             if evaluation.value < aspiration_utility:

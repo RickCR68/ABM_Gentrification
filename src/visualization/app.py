@@ -8,7 +8,7 @@ from mesa.visualization import (
     SpaceRenderer,
     make_plot_component,
 )
-from mesa.visualization.components import AgentPortrayalStyle
+from mesa.visualization.components import AgentPortrayalStyle, PropertyLayerStyle
 
 from src.project.model import GentrificationModel
 from src.utils.helpers import (
@@ -43,6 +43,28 @@ def agent_portrayal(agent) -> AgentPortrayalStyle:
         size=80,
         zorder=3 if agent.satisfied else 2,
     )
+
+
+selected_layer = solara.reactive("rent")
+
+def property_layer_portrayal(layer):
+    print(layer)
+    print(layer.name)
+    if layer.name == selected_layer.value:
+        return PropertyLayerStyle(
+            color="blue", alpha=0.8, colorbar=True
+        )
+    # elif layer.name == "mean_neighbor_income":
+    #     return PropertyLayerStyle(
+    #         color="green", alpha=0.8, colorbar=True, vmin=0, vmax=10
+    #     )
+    return None
+
+def layer_selector(layer):
+    layers = ["rent", "mean_neighbor_income"]  # Your actual layer names
+    solara.Select(label="Select Property Layer",
+                  value=selected_layer,
+                  values=layers)
 
 
 def get_model_statistics(model):
@@ -340,6 +362,7 @@ renderer = SpaceRenderer(
 )
 
 renderer.setup_agents(agent_portrayal)
+renderer.setup_propertylayer(property_layer_portrayal)
 renderer.render()
 
 
@@ -387,12 +410,14 @@ page = SolaraViz(
     model,
     renderer,
     components=[
+        layer_selector,
         get_model_statistics,
         SatisfactionPlot,
         MovementPlot,
         MovementSuccessPlot,
         IncomeRentPlot,
         UtilityPlot,
+
     ],
     model_params=model_params,
     name="Gentrification model",
