@@ -377,6 +377,23 @@ def IncomeHistogram(model):
     ax.set_title("Income Histogram")
     solara.FigureMatplotlib(fig)
 
+@solara.component
+def RentVsIncomeScatter(model):
+    update_counter.get()  # Required to trigger updates
+    fig = Figure(figsize=(6, 4))
+    ax = fig.subplots()
+
+    rent_vals = []
+    income_vals = []
+
+    for agent in model.agents:
+        rent_vals.append(agent.cell.rent)
+        income_vals.append(agent.income)
+    ax.scatter(income_vals, rent_vals[:len(income_vals)])
+    ax.set_xlabel("Income")
+    ax.set_ylabel("Rent")
+    ax.set_title("Rent vs Income")
+    solara.FigureMatplotlib(fig)
 
 SatisfactionPlot = make_plot_component(
     {
@@ -424,6 +441,7 @@ page = SolaraViz(
     components=[
         layer_selector,
         IncomeHistogram,
+        RentVsIncomeScatter,
         get_model_statistics,
         SatisfactionPlot,
         MovementPlot,
