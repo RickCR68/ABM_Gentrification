@@ -9,6 +9,8 @@ from mesa.visualization import (
     make_plot_component,
 )
 from mesa.visualization.components import AgentPortrayalStyle, PropertyLayerStyle
+from matplotlib.figure import Figure
+from mesa.visualization.utils import update_counter
 
 from src.project.model import GentrificationModel
 from src.utils.helpers import (
@@ -365,6 +367,16 @@ renderer.setup_agents(agent_portrayal)
 renderer.setup_propertylayer(property_layer_portrayal)
 renderer.render()
 
+@solara.component
+def IncomeHistogram(model):
+    update_counter.get()  # Required to trigger updates
+    fig = Figure(figsize=(6, 4))
+    ax = fig.subplots()
+    income_vals = [agent.income for agent in model.agents]
+    ax.hist(income_vals)
+    ax.set_title("Income Histogram")
+    solara.FigureMatplotlib(fig)
+
 
 SatisfactionPlot = make_plot_component(
     {
@@ -411,6 +423,7 @@ page = SolaraViz(
     renderer,
     components=[
         layer_selector,
+        IncomeHistogram,
         get_model_statistics,
         SatisfactionPlot,
         MovementPlot,
