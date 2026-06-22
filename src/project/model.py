@@ -668,6 +668,7 @@ class GentrificationModel(Model):
         )
         self._update_agent_states()
         self._update_satisfaction()
+        self._update_percentiles()
 
         # 7. Record aggregate outputs.
         self.datacollector.collect(self)
@@ -907,3 +908,12 @@ class GentrificationModel(Model):
             following_count
             / len(valid_records)
         )
+
+    def _update_percentiles(self):
+        incomes = np.array([a.income for a in self.agents])
+
+        self.income_thresholds = np.quantile(
+            incomes,
+            [0.01, 0.15, 0.4, 0.6, 0.85, 0.99]
+        )
+        self.agents.do("update_visuals")

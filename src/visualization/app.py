@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import numpy as np
 import solara
 import math
 from mesa.visualization import (
@@ -8,7 +9,7 @@ from mesa.visualization import (
     SpaceRenderer,
     make_plot_component,
 )
-from mesa.visualization.components import AgentPortrayalStyle, PropertyLayerStyle
+from mesa.visualization.components import AgentPortrayalStyle, PropertyLayerStyle, make_space_component
 from matplotlib.figure import Figure
 from mesa.visualization.utils import update_counter
 
@@ -18,11 +19,40 @@ from src.utils.helpers import (
 )
 
 
+
 def normalize_income(income: float, max_income: float) -> float:
     """Map non-negative income to the interval [0, 1)."""
     income = max(income/max_income, 0.0)
 
     return income
+
+
+# @solara.component
+# def IncomeBasedSpaceRenderer(model):
+#     """Custom component that computes max_income once per render."""
+#     update_counter.get()  # Required for reactivity
+#
+#     # Compute max_income once per render (not per agent)
+#     max_income = max((agent.income for agent in model.agents), default=1.0)
+#
+#     def agent_portrayal(agent) -> AgentPortrayalStyle:
+#         """Define how a household is displayed."""
+#         income_normalized = normalize_income(agent.income, max_income)
+#         hex_color = generate_vibrant_red_blue_gradient(income_normalized)
+#
+#         return AgentPortrayalStyle(
+#             x=agent.cell.coordinate[0],
+#             y=agent.cell.coordinate[1],
+#             color=hex_color,
+#             marker="o" if agent.satisfied else "x",
+#             size=80,
+#             zorder=3 if agent.satisfied else 2,
+#         )
+#
+#         # Use the standard space component with our computed portrayal
+#
+#     space_component = make_space_component(agent_portrayal)
+#     return space_component(model)
 
 
 def agent_portrayal(agent) -> AgentPortrayalStyle:
@@ -32,20 +62,33 @@ def agent_portrayal(agent) -> AgentPortrayalStyle:
         agent.income, max_income
     )
 
-    hex_color = generate_vibrant_red_blue_gradient(
-        income_normalized
-    )
+    rent = agent.cell.rent
+    income = agent.income
 
-    return AgentPortrayalStyle(
-        # Explicit coordinates are retained because the installed
-        # Mesa renderer appears to require them.
-        x=agent.cell.coordinate[0],
-        y=agent.cell.coordinate[1],
-        color=hex_color,
-        marker="o" if agent.satisfied else "x",
-        size=80,
-        zorder=3 if agent.satisfied else 2,
-    )
+    is_homeless = income < rent*model.affordability_share
+
+    if is_homeless:
+        return AgentPortrayalStyle(
+            # Explicit coordinates are retained because the installed
+            # Mesa renderer appears to require them.
+            x=agent.cell.coordinate[0],
+            y=agent.cell.coordinate[1],
+            color=agent.colour,
+            marker="s",
+            size=80,
+            zorder=3 if agent.satisfied else 2,
+        )
+    else:
+        return AgentPortrayalStyle(
+            # Explicit coordinates are retained because the installed
+            # Mesa renderer appears to require them.
+            x=agent.cell.coordinate[0],
+            y=agent.cell.coordinate[1],
+            color=agent.colour,
+            marker="o" if agent.satisfied else "^",
+            size=80,
+            zorder=3 if agent.satisfied else 2,
+        )
 
 
 selected_layer = solara.reactive("rent")
@@ -348,22 +391,17 @@ model_params = {
     # ---------------------------------------------------------
     # Game costs
     # ---------------------------------------------------------
-    "moving_cost": Slider(
-        "Moving cost c_m",
-        value=0.05,
-        min=0.0,
-        max=10.0,
-        step=0.01,
-    ),
+    "moving_cost": {
+    "type": "InputText",
+    "value": 1.0,
+    "label": "Moving cost",
+    },
 
-    "rejection_cost": Slider(
-        "Rejection cost c_r",
-        value=0.05,
-        min=0.0,
-        max=10.0,
-        step=0.01,
-    ),
-
+    "rejection_cost": {
+    "type": "InputText",
+    "value": 1.0,
+    "label": "Rejection cost",
+    },
     # ---------------------------------------------------------
     # Neighbourhood preferences and decision noise
     # ---------------------------------------------------------
@@ -492,6 +530,8 @@ def RentVsIncomeScatter(model):
     ax.legend()
     solara.FigureMatplotlib(fig)
 
+
+
 SatisfactionPlot = make_plot_component(
     {
         "pct_satisfied": "tab:green",
@@ -580,6 +620,7 @@ page = SolaraViz(
         EquilibriumProbabilityPlot,
         EquilibriumDeviationPlot,
         NEFollowingPlot,
+        # IncomeBasedSpaceRenderer,
     ],
     model_params=model_params,
     name="Gentrification model",

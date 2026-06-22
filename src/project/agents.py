@@ -5,6 +5,16 @@ from typing import TYPE_CHECKING
 
 from mesa.discrete_space import CellAgent
 
+COLORS = [
+    "#8B0000",  # darkest red
+    "#D73027",
+    "#FC8D59",
+    "#FEE08B",
+    "#D9EF8B",
+    "#91CF60",
+    "#1A9850",  # darkest green
+]
+
 if TYPE_CHECKING:
     from mesa.discrete_space import Cell
 
@@ -78,6 +88,10 @@ class SchellingAgent(CellAgent):
         self.discount_factor = discount_factor
         self.risk_aversion = risk_aversion
         self.rationality = rationality
+
+        self.income_percentile = 0.0
+
+        self.colour = "blue"
 
         self.current_utility = 0.0
         self.current_value = 0.0
@@ -364,3 +378,25 @@ class SchellingAgent(CellAgent):
 
         if self.satisfied:
             self.model.satisfied_count += 1
+
+
+    def update_visuals(self):
+
+        q10, q25, q50, q75, q90, q99 = (
+            self.model.income_thresholds
+        )
+
+        income = self.income
+
+        if income >= q99:
+            self.colour = COLORS[5]
+        elif income >= q90:
+            self.colour = COLORS[4]
+        elif income >= q75:
+            self.colour = COLORS[3]
+        elif income >= q50:
+            self.colour = COLORS[2]
+        elif income >= q25:
+            self.colour = COLORS[1]
+        else:
+            self.colour = COLORS[0]
