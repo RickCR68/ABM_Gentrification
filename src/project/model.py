@@ -414,10 +414,10 @@ class GentrificationModel(Model):
             agent_reporters={
                 "initial_income": "initial_income",
                 "income": "income",
+                "cell_coordinate": lambda a: a.cell.coordinate,
                 "disposeable_income": (
                     'disposeable_income'
                 ),
-
                 "income_similarity_preference": (
                     "income_similarity_preference"
                 ),
