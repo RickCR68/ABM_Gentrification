@@ -88,6 +88,8 @@ class GentrificationModel(Model):
             income_growth_scaling=income_growth_scaling,
             income_volatility=income_volatility,
         )
+        #????
+        self.affordability_share = affordability_share
 
         # Grid and population parameters
         self.width = width
@@ -158,7 +160,7 @@ class GentrificationModel(Model):
         )
 
         self.utility_policy = IncomeNeighborhoodUtility(
-            affordability_share=affordability_share,
+            affordability_share=self.affordability_share,
             income_growth_scaling=income_growth_scaling,
         )
 

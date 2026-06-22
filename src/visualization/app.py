@@ -292,10 +292,10 @@ model_params = {
     # ---------------------------------------------------------
     "rent_adjustment_rate": Slider(
         "Rent adjustment rate",
-        value=0.1,
-        min=0.01,
-        max=0.9,
-        step=0.01,
+        value=0.01,
+        min=0.0,
+        max=0.1,
+        step=0.001,
     ),
 
     # ---------------------------------------------------------
@@ -303,10 +303,10 @@ model_params = {
     # ---------------------------------------------------------
     "income_growth_scaling": Slider(
         "Neighbourhood income-growth strength",
-        value=0.01,
+        value=0.001,
         min=0.0,
-        max=0.2,
-        step=0.005,
+        max=0.1,
+        step=0.001,
     ),
 
     "income_volatility": Slider(
@@ -391,9 +391,17 @@ def RentVsIncomeScatter(model):
         rent_vals.append(agent.cell.rent)
         income_vals.append(agent.income)
     ax.scatter(income_vals, rent_vals[:len(income_vals)])
+
+    max_income = max(income_vals)
+    min_income = min(income_vals)
+    max_affordability_rent = max_income * model.affordability_share
+    min_affordability_rent = min_income * model.affordability_share
+    ax.plot([min_income, max_income], [min_affordability_rent, max_affordability_rent], color="red", linestyle="--", label="Affordability threshold")
+
     ax.set_xlabel("Income")
     ax.set_ylabel("Rent")
     ax.set_title("Rent vs Income")
+    ax.legend()
     solara.FigureMatplotlib(fig)
 
 SatisfactionPlot = make_plot_component(

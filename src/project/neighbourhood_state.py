@@ -153,6 +153,7 @@ class NeighborhoodStateManager:
 
         delta = self.rent_adjustment_rate
 
+        #TODO: make rent cap variable
         rents[:] = rents + delta * (
             mean_incomes - rents
         )
