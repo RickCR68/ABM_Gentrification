@@ -10,7 +10,7 @@ from mesa import Model
 from mesa.datacollection import DataCollector
 from mesa.discrete_space import OrthogonalMooreGrid
 
-from .agents import SchellingAgent
+ 
 from .game import (
     ApplicationGamePolicy,
     LogitQRESolver,
@@ -234,7 +234,7 @@ class GentrificationModel(Model):
                 income_growth_scaling=(
                     income_growth_scaling
                 ),
-                infeasible_utility=-1e6,
+                infeasible_utility=-0,
             )
         )
 
@@ -486,15 +486,15 @@ class GentrificationModel(Model):
                 "Discount factors must lie in [0, 1]."
             )
 
-        if not (
-            0.0
-            <= parameters["risk_aversion_min"]
-            <= parameters["risk_aversion_max"]
-            < 5.0
-        ):
-            raise ValueError(
-                "Household risk aversion must satisfy 0 <= rho < 5."
-            )
+        # if not (
+        #     # 0.0
+        #     # <= parameters["risk_aversion_min"]
+        #     parameters["risk_aversion_max"]
+        #     < 1.0
+        # ):
+        #     raise ValueError(
+        #         "Household risk aversion must satisfy 0 <= rho < 999."
+        #     )
 
         if parameters["rationality_min"] < 0.0:
             raise ValueError(
