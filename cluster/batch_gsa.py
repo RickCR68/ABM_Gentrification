@@ -28,7 +28,8 @@ SIM_STEPS = 50  # Number of steps to run each model instance
 def run_single_simulation(args):
     """
     Worker function executed on an individual CPU core.
-    Unpacks parameter combinations, runs the model, and extracts key metrics from DataCollector.
+    Unpacks parameter combinations, runs the model, and extracts both
+    the input parameter values and the final macroscopic system metrics.
     """
     param_set, run_id = args
     theta, risk_aversion, discount_factor, rationality, vision_radius = param_set
@@ -56,8 +57,16 @@ def run_single_simulation(args):
     # Safely extract tracked metrics from the last step collected by the DataCollector DataFrame
     df_model_vars = model.datacollector.get_model_vars_dataframe()
     
+    # Map both input parameters and output results into the returned dictionary
     outputs = {
         'run_id': run_id,
+        # --- Tracked Input Parameters ---
+        'theta': theta,
+        'risk_aversion': risk_aversion,
+        'discount_factor': discount_factor,
+        'rationality': rationality,
+        'vision_radius': int(np.round(vision_radius)),
+        # --- Tracked Output Metrics ---
         'pct_satisfied': df_model_vars["pct_satisfied"].iloc[-1],
         'movement_success_rate': df_model_vars["movement_success_rate"].iloc[-1],
         'mean_rent': df_model_vars["mean_rent"].iloc[-1]
