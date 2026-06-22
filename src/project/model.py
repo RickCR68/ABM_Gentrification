@@ -414,6 +414,9 @@ class GentrificationModel(Model):
             agent_reporters={
                 "initial_income": "initial_income",
                 "income": "income",
+                "disposeable_income": (
+                    'disposeable_income'
+                ),
 
                 "income_similarity_preference": (
                     "income_similarity_preference"
@@ -686,6 +689,7 @@ class GentrificationModel(Model):
 
         # 1. Income changes.
         self.agents.shuffle_do("change_income")
+        self.agents.shuffle_do("change_disposeable_income")
 
         # 2. Refresh local incomes and rents.
         self.neighborhood_state.refresh_current_income(
