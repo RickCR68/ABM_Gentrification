@@ -352,7 +352,7 @@ model_params = {
         "Moving cost c_m",
         value=0.05,
         min=0.0,
-        max=1.0,
+        max=10.0,
         step=0.01,
     ),
 
@@ -360,7 +360,7 @@ model_params = {
         "Rejection cost c_r",
         value=0.05,
         min=0.0,
-        max=1.0,
+        max=10.0,
         step=0.01,
     ),
 
