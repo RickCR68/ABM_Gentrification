@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import math
+import math 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -91,7 +91,7 @@ class IncomeNeighborhoodUtility(UtilityPolicy):
         *,
         affordability_share: float = 0.8,
         income_growth_scaling: float = 0.01,
-        infeasible_utility: float = -math.inf,
+        infeasible_utility: float = -1e6,
     ) -> None:
         self._validate_policy_parameters(
             affordability_share=affordability_share,
