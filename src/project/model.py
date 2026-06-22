@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from itertools import accumulate
 
 import numpy as np
 
@@ -228,6 +229,9 @@ class GentrificationModel(Model):
 
                 "rent_income_timescale_ratio": (
                     self.rent_income_timescale_ratio
+                ),
+                "gini_coefficient": (
+                    self.gini_coefficient
                 ),
             },
             agent_reporters={
@@ -600,3 +604,33 @@ class GentrificationModel(Model):
             self.rent_adjustment_rate
             / self.income_growth_scaling
         )
+
+    def gini_coefficient(self):
+        """Calculate the Gini coefficient for household incomes."""
+        incomes = [agent.income for agent in self.agents]
+
+        if not incomes:
+            return 0.0
+
+        sorted_incomes = sorted(incomes)
+        n = len(incomes)
+        cumulative_incomes = [0] + list(
+            accumulate(sorted_incomes)
+        )
+
+        total_income = cumulative_incomes[-1]
+        if total_income == 0:
+            return 0.0
+
+        gini_numerator = sum(
+            (i + 1) * income
+            for i, income in enumerate(sorted_incomes)
+        )
+        gini_denominator = n * total_income
+
+        gini_coefficient = (
+                (2 * gini_numerator) / gini_denominator
+                - (n + 1) / n
+        )
+
+        return gini_coefficient

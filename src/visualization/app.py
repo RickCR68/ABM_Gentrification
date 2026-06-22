@@ -435,6 +435,12 @@ UtilityPlot = make_plot_component(
     }
 )
 
+GiniPlot = make_plot_component(
+    {
+        "gini_coefficient": "tab:blue",
+    }
+)
+
 
 page = SolaraViz(
     model,
@@ -449,7 +455,7 @@ page = SolaraViz(
         MovementSuccessPlot,
         IncomeRentPlot,
         UtilityPlot,
-
+        GiniPlot,
     ],
     model_params=model_params,
     name="Gentrification model",
