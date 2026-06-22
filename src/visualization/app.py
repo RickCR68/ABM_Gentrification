@@ -18,17 +18,18 @@ from src.utils.helpers import (
 )
 
 
-def normalize_income(income: float) -> float:
+def normalize_income(income: float, max_income: float) -> float:
     """Map non-negative income to the interval [0, 1)."""
-    income = max(float(income), 0.0)
+    income = max(income/max_income, 0.0)
 
-    return income / (1.0 + income)
+    return income
 
 
 def agent_portrayal(agent) -> AgentPortrayalStyle:
     """Define how a household is displayed."""
+    max_income = max(agent.model.agents, key=lambda a: a.income).income
     income_normalized = normalize_income(
-        agent.income
+        agent.income, max_income
     )
 
     hex_color = generate_vibrant_red_blue_gradient(
@@ -50,8 +51,6 @@ def agent_portrayal(agent) -> AgentPortrayalStyle:
 selected_layer = solara.reactive("rent")
 
 def property_layer_portrayal(layer):
-    print(layer)
-    print(layer.name)
     if layer.name == selected_layer.value:
         return PropertyLayerStyle(
             color="blue", alpha=0.8, colorbar=True
@@ -60,10 +59,12 @@ def property_layer_portrayal(layer):
     #     return PropertyLayerStyle(
     #         color="green", alpha=0.8, colorbar=True, vmin=0, vmax=10
     #     )
-    return None
+    return PropertyLayerStyle(
+            color="blue", alpha=0.0, colorbar=False
+        )
 
 def layer_selector(layer):
-    layers = ["rent", "mean_neighbor_income"]  # Your actual layer names
+    layers = ["rent", "mean_neighbor_income", "None"]  # Your actual layer names
     solara.Select(label="Select Property Layer",
                   value=selected_layer,
                   values=layers)
