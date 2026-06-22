@@ -15,11 +15,11 @@ GSA_PROBLEM = {
     'num_vars': 5,
     'names': ['theta', 'risk_aversion', 'discount_factor', 'rationality', 'vision_radius'],
     'bounds': [
-        [0.0, 3.0],   # theta (similarity preference)
-        [0.0, 5.0],   # risk_aversion (\rho)
+        [0.0, 2.0],   # Theta upper bound
+        [0.0, 0.8],   # Risk_aversion upper bound
         [0.0, 1.0],   # discount_factor (\beta)
-        [1.0, 20.0],  # rationality (\lambda)
-        [1, 10]       # vision_radius (v) - Treated as continuous for sampling, cast to int later
+        [1.0, 10.0],  # Upper bound to 10.0
+        [1, 10]       # vision_radius (v) - Treated as continuous for sampling
     ]
 }
 
@@ -28,17 +28,17 @@ SIM_STEPS = 50  # Number of steps to run each model instance
 def run_single_simulation(args):
     """
     Worker function executed on an individual CPU core.
-    Unpacks parameter combinations, runs the model, and extracts key metrics.
+    Unpacks parameter combinations, runs the model, and extracts key metrics from DataCollector.
     """
     param_set, run_id = args
     theta, risk_aversion, discount_factor, rationality, vision_radius = param_set
     
-    # Initialize your model with the sampled parameters
+    # Initialize your model with the sampled parameters matching model validation
     model = GentrificationModel(
-        width=20,
-        height=20,
-        density=0.8,
-        income_similarity_min=theta,  # Handle flat/heterogeneous distribution setup here
+        width=11,
+        height=11,
+        density=0.95,
+        income_similarity_min=theta,
         income_similarity_max=theta,
         risk_aversion_min=risk_aversion,
         risk_aversion_max=risk_aversion,
@@ -47,19 +47,20 @@ def run_single_simulation(args):
         rationality_min=rationality,
         rationality_max=rationality,
         maximum_vision_radius=int(np.round(vision_radius)),
-        # ... include other fixed operational parameters ...
     )
     
     # Execute the simulation run
     for _ in range(SIM_STEPS):
         model.step()
         
-    # Extract targeted macroscopic system outputs
+    # Safely extract tracked metrics from the last step collected by the DataCollector DataFrame
+    df_model_vars = model.datacollector.get_model_vars_dataframe()
+    
     outputs = {
         'run_id': run_id,
-        'segregation_index': model.datacollector.get_model_vars_dataframe()["Segregation"].iloc[-1], # placeholder name
-        'displacement_rate': model.datacollector.get_model_vars_dataframe()["Displacement"].iloc[-1], # placeholder name
-        'mean_rent_growth': model.mean_rent()
+        'pct_satisfied': df_model_vars["pct_satisfied"].iloc[-1],
+        'movement_success_rate': df_model_vars["movement_success_rate"].iloc[-1],
+        'mean_rent': df_model_vars["mean_rent"].iloc[-1]
     }
     return outputs
 
@@ -88,12 +89,21 @@ if __name__ == "__main__":
     
     # 5. Calculate Sensitivity Indices
     print("\n--- Sobol Sensitivity Analysis Results ---")
-    for metric in ['segregation_index', 'displacement_rate', 'mean_rent_growth']:
+    metrics_to_analyze = ['pct_satisfied', 'movement_success_rate', 'mean_rent']
+    
+    for metric in metrics_to_analyze:
         Y = df_results[metric].values
+        
+        # Check for edge cases where model output does not change across runs (e.g., zero variance)
+        if np.all(Y == Y[0]):
+            print(f"\nTarget Output Metric: {metric}")
+            print("Warning: Output is constant across all runs. Variance is zero; skipping index computation.")
+            continue
+            
         Si = analyze_sobol.analyze(GSA_PROBLEM, Y, print_to_console=False)
         
         print(f"\nTarget Output Metric: {metric}")
-        # Convert to DataFrame for easier inspection
+        # Convert to DataFrame for cleaner formatting
         df_si = pd.DataFrame({
             'Variable': GSA_PROBLEM['names'],
             'First-Order (S1)': Si['S1'],
