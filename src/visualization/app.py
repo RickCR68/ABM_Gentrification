@@ -277,16 +277,16 @@ model_params = {
     "risk_aversion_min": Slider(
         "Minimum risk aversion",
         value=0.0,
-        min=0.0,
-        max=5.0,
+        min=-10.0,
+        max=0.99,
         step=0.05,
     ),
 
     "risk_aversion_max": Slider(
         "Maximum risk aversion",
         value=1.0,
-        min=0.0,
-        max=5.0,
+        min=-10.0,
+        max=0.99,
         step=0.05,
     ),
 

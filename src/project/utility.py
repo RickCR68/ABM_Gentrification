@@ -91,7 +91,7 @@ class IncomeNeighborhoodUtility(UtilityPolicy):
         *,
         affordability_share: float = 0.8,
         income_growth_scaling: float = 0.01,
-        infeasible_utility: float = -1e6,
+        infeasible_utility: float = -math.inf,
     ) -> None:
         self._validate_policy_parameters(
             affordability_share=affordability_share,
@@ -119,6 +119,7 @@ class IncomeNeighborhoodUtility(UtilityPolicy):
                 "income_growth_scaling must be non-negative."
             )
 
+
     def evaluate(
         self,
         agent: SchellingAgent,
@@ -128,9 +129,11 @@ class IncomeNeighborhoodUtility(UtilityPolicy):
     ) -> LocationEvaluation:
         """Evaluate one location for one household.
 
-        The `is_current_location` parameter is retained for interface
-        compatibility, but it currently does not alter utility because
-        moving costs are excluded while the application game is ignored.
+        Raw utility is always calculated, even when the location is
+        unaffordable. Affordability is stored separately and is used by the
+        destination-choice policy to exclude infeasible destinations.
+
+        Moving and rejection costs are added later in the application game.
         """
         rent = self._layer_value(
             agent.model.grid.rent,
@@ -175,24 +178,9 @@ class IncomeNeighborhoodUtility(UtilityPolicy):
             * spillover
         )
 
-        if not affordable:
-            return LocationEvaluation(
-                cell=cell,
-                rent=rent,
-                mean_neighbor_income=mean_income,
-                maximum_affordable_rent=(
-                    maximum_affordable_rent
-                ),
-                affordable=False,
-                income_distance=income_distance,
-                spillover=spillover,
-                rent_component=rent_component,
-                similarity_component=similarity_component,
-                growth_component=growth_component,
-                utility=self.infeasible_utility,
-                value=self.infeasible_utility,
-            )
-
+        # Always calculate raw economic utility.
+        # Unaffordable destinations are filtered later using
+        # evaluation.affordable.
         utility = self.calculate_utility(
             rent_component=rent_component,
             similarity_component=similarity_component,
@@ -202,6 +190,8 @@ class IncomeNeighborhoodUtility(UtilityPolicy):
         value = self.apply_signed_crra(
             utility=utility,
             risk_aversion=agent.risk_aversion,
+            # Include this only if you implemented shifted signed CRRA:
+            # offset=agent.model.crra_offset,
         )
 
         return LocationEvaluation(
@@ -211,7 +201,7 @@ class IncomeNeighborhoodUtility(UtilityPolicy):
             maximum_affordable_rent=(
                 maximum_affordable_rent
             ),
-            affordable=True,
+            affordable=affordable,
             income_distance=income_distance,
             spillover=spillover,
             rent_component=rent_component,
@@ -220,6 +210,7 @@ class IncomeNeighborhoodUtility(UtilityPolicy):
             utility=utility,
             value=value,
         )
+
 
     @staticmethod
     def _layer_value(
@@ -294,11 +285,11 @@ class IncomeNeighborhoodUtility(UtilityPolicy):
         signed extension preserves the utility sign while applying the
         CRRA curvature to its magnitude.
         """
-        if not 0.0 <= risk_aversion < 5.0:
-            raise ValueError(
-                "risk_aversion must satisfy "
-                "0 <= rho < 5."
-            )
+        # if not 0.0 <= risk_aversion < 5.0:
+        #     raise ValueError(
+        #         "risk_aversion must satisfy "
+        #         "0 <= rho < 5."
+        #     )
 
         if not math.isfinite(utility):
             return utility

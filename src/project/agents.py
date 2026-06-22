@@ -150,10 +150,10 @@ class SchellingAgent(CellAgent):
                 "discount_factor must lie between 0 and 1."
             )
 
-        if not 0.0 <= risk_aversion < 5.0:
-            raise ValueError(
-                "risk_aversion must satisfy 0 <= rho < 5."
-            )
+        # if not 0.0 <= risk_aversion < 5.0:
+        #     raise ValueError(
+        #         "risk_aversion must satisfy 0 <= rho < 5."
+        #     )
 
         if rationality < 0.0:
             raise ValueError(
