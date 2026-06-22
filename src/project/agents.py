@@ -8,6 +8,9 @@ from mesa.discrete_space import CellAgent
 if TYPE_CHECKING:
     from mesa.discrete_space import Cell
 
+    from .game import (
+        ApplicationGameRecord,
+    )
     from .destination_choice import (
         DestinationCandidate,
         DestinationSearchSummary,
@@ -16,21 +19,20 @@ if TYPE_CHECKING:
 
 
 class SchellingAgent(CellAgent):
-    """Household agent in the income-segregation model.
+    """Household agent in the gentrification model.
+        Each household has heterogeneous economic and behavioural attributes:
 
-    Each household has heterogeneous economic and behavioural attributes:
+        - current and initial income;
+        - income-similarity preference theta_i;
+        - discount factor beta_i;
+        - risk-aversion parameter rho_i;
+        - rationality parameter lambda_i;
+        - a fixed vision radius based on initial income.
 
-    - current and initial income;
-    - income-similarity preference theta_i;
-    - discount factor beta_i;
-    - risk-aversion parameter rho_i;
-    - rationality parameter lambda_i;
-    - a fixed vision radius based on initial income.
-
-    Every household searches for a satisfactory destination each period.
-    Satisfaction is based on the number of consecutive periods in which
-    the household has not moved.
-    """
+        Every household searches for a satisfactory destination each period.
+        Satisfaction is based on the number of consecutive periods in which
+        the household has not moved.
+        """
 
     def __init__(
         self,
@@ -42,7 +44,6 @@ class SchellingAgent(CellAgent):
         risk_aversion: float,
         rationality: float,
     ) -> None:
-        """Create a household agent."""
         super().__init__(model)
 
         self._validate_parameters(
@@ -57,17 +58,9 @@ class SchellingAgent(CellAgent):
 
         self.cell = cell
 
-        # -----------------------------------------------------
-        # Economic state
-        # -----------------------------------------------------
         self.initial_income = income
         self.income = income
 
-        # Vision is calculated once from initial income:
-        #
-        #     v_i = round(g * y_i(0) + 1)
-        #
-        # and remains fixed as income changes.
         raw_vision = (
             self.model.vision_income_scale
             * self.initial_income
@@ -79,9 +72,6 @@ class SchellingAgent(CellAgent):
             max(1, int(round(raw_vision))),
         )
 
-        # -----------------------------------------------------
-        # Behavioural parameters
-        # -----------------------------------------------------
         self.income_similarity_preference = (
             income_similarity_preference
         )
@@ -89,23 +79,14 @@ class SchellingAgent(CellAgent):
         self.risk_aversion = risk_aversion
         self.rationality = rationality
 
-        # -----------------------------------------------------
-        # Current-location utility state
-        # -----------------------------------------------------
         self.current_utility = 0.0
         self.current_value = 0.0
         self.current_location_affordable = True
 
-        # -----------------------------------------------------
-        # Residence-duration satisfaction
-        # -----------------------------------------------------
         self.steps_since_move = 0
         self.moved_this_step = False
         self.satisfied = False
 
-        # -----------------------------------------------------
-        # Search and movement diagnostics
-        # -----------------------------------------------------
         self.last_search_summary: (
             DestinationSearchSummary | None
         ) = None
@@ -115,8 +96,21 @@ class SchellingAgent(CellAgent):
             tuple[int, ...] | None
         ) = None
         self.last_destination_utility: float | None = None
-        self.last_value_improvement: float | None = None
         self.last_destination_value: float | None = None
+        self.last_value_improvement: float | None = None
+
+        self.last_game_record: (
+            ApplicationGameRecord | None
+        ) = None
+
+        self.last_qre_move_probability: float | None = None
+        self.last_qre_accept_probability: float | None = None
+        self.last_ne_move_probability: float | None = None
+        self.last_qre_ne_move_gap: float | None = None
+
+        self.pending_destination: (
+            DestinationCandidate | None
+        ) = None
 
     @staticmethod
     def _validate_parameters(
@@ -127,7 +121,6 @@ class SchellingAgent(CellAgent):
         risk_aversion: float,
         rationality: float,
     ) -> None:
-        """Validate household-specific parameters."""
         if income <= 0.0:
             raise ValueError(
                 "income must be strictly positive."
@@ -135,8 +128,7 @@ class SchellingAgent(CellAgent):
 
         if income_similarity_preference < 0.0:
             raise ValueError(
-                "income_similarity_preference must be "
-                "non-negative."
+                "income_similarity_preference must be non-negative."
             )
 
         if not 0.0 <= discount_factor <= 1.0:
@@ -146,8 +138,7 @@ class SchellingAgent(CellAgent):
 
         if not 0.0 <= risk_aversion < 5.0:
             raise ValueError(
-                "risk_aversion must satisfy "
-                "0 <= rho < 5."
+                "risk_aversion must satisfy 0 <= rho < 5."
             )
 
         if rationality < 0.0:
@@ -161,7 +152,6 @@ class SchellingAgent(CellAgent):
         *,
         is_current_location: bool = False,
     ) -> LocationEvaluation:
-        """Evaluate a cell using the model's utility policy."""
         return self.model.utility_policy.evaluate(
             agent=self,
             cell=cell,
@@ -169,7 +159,6 @@ class SchellingAgent(CellAgent):
         )
 
     def assign_state(self) -> None:
-        """Store utility and transformed value at the current cell."""
         evaluation = self.evaluate_location(
             self.cell,
             is_current_location=True,
@@ -185,7 +174,6 @@ class SchellingAgent(CellAgent):
         self,
         destination: Cell,
     ) -> tuple[LocationEvaluation, float]:
-        """Evaluate a destination relative to the current value."""
         evaluation = self.evaluate_location(
             destination,
             is_current_location=False,
@@ -199,25 +187,6 @@ class SchellingAgent(CellAgent):
         return evaluation, value_improvement
 
     def change_income(self) -> None:
-        """Update income using neighbourhood-dependent GBM.
-
-        The drift is
-
-            eta * max(
-                0,
-                (mean_y_j - y_i) / mean_y_j
-            ).
-
-        The discrete update is
-
-            y_i(t+1)
-            =
-            y_i(t) exp(
-                drift
-                - sigma^2 / 2
-                + sigma epsilon_i
-            ).
-        """
         coordinate = self.cell.coordinate
 
         local_mean_income = float(
@@ -260,11 +229,14 @@ class SchellingAgent(CellAgent):
 
         self.income *= growth_factor
 
-    def attempt_move(self) -> bool:
-        """Search for and move to a satisfactory destination."""
+    def prepare_move_decision(self) -> None:
+        """Choose a candidate and play the game without moving yet."""
+        self.moved_this_step = False
+        self.pending_destination = None
+
         self.model.move_attempts += 1
 
-        candidate: DestinationCandidate | None = (
+        candidate = (
             self.model.destination_choice_policy
             .choose_destination(self)
         )
@@ -275,11 +247,62 @@ class SchellingAgent(CellAgent):
             self.last_move_successful = False
             self.last_destination_coordinate = None
             self.last_destination_utility = None
-            self.last_utility_improvement = None
             self.last_destination_value = None
             self.last_value_improvement = None
 
-            return False
+            self.last_game_record = None
+            self.last_qre_move_probability = None
+            self.last_qre_accept_probability = None
+            self.last_ne_move_probability = None
+            self.last_qre_ne_move_gap = None
+            return
+
+        game_record = (
+            self.model.application_game_policy.play(
+                agent=self,
+                candidate=candidate,
+            )
+        )
+
+        self.model.game_records_this_step.append(
+            game_record
+        )
+
+        if self.model.keep_game_history:
+            self.model.game_history.append(
+                game_record
+            )
+
+        self.last_game_record = game_record
+
+        self.last_qre_move_probability = (
+            game_record.qre.p_move
+        )
+        self.last_qre_accept_probability = (
+            game_record.qre.p_accept
+        )
+        self.last_ne_move_probability = (
+            game_record.nash.closest_move_probability
+        )
+        self.last_qre_ne_move_gap = (
+            game_record.nash.move_probability_gap
+        )
+
+        if not game_record.qre.converged:
+            self.model.qre_nonconvergence_count += 1
+
+        outcome = (
+            game_record.realized_game_outcome
+        )
+
+        if outcome == "move_accept":
+            self.model.move_accept_outcomes += 1
+        elif outcome == "move_reject":
+            self.model.move_reject_outcomes += 1
+        elif outcome == "stay_accept":
+            self.model.stay_accept_outcomes += 1
+        else:
+            self.model.stay_reject_outcomes += 1
 
         self.last_destination_coordinate = (
             candidate.cell.coordinate
@@ -287,28 +310,48 @@ class SchellingAgent(CellAgent):
         self.last_destination_utility = (
             candidate.evaluation.utility
         )
-        self.last_destination_utility = (
-            candidate.evaluation.utility
-        )
-
         self.last_destination_value = (
             candidate.evaluation.value
         )
-
         self.last_value_improvement = (
             candidate.value_improvement
         )
 
-        self.move_to(candidate.cell)
+        if not game_record.household_chose_move:
+            self.model.voluntary_stays += 1
+            self.last_move_successful = False
+            return
+
+        self.pending_destination = candidate
+
+    def execute_pending_move(self) -> None:
+        """Execute a previously prepared move after conflict resolution."""
+        if self.pending_destination is None:
+            return
+
+        self.move_to(
+            self.pending_destination.cell
+        )
 
         self.moved_this_step = True
         self.last_move_successful = True
         self.model.successful_moves += 1
 
-        return True
+        self.pending_destination = None
+
+    def cancel_pending_move_due_to_conflict(
+        self,
+    ) -> None:
+        """Cancel a selected move because another agent won the vacancy."""
+        if self.pending_destination is None:
+            return
+
+        self.pending_destination = None
+        self.moved_this_step = False
+        self.last_move_successful = False
+        self.model.destination_conflicts += 1
 
     def update_satisfaction(self) -> None:
-        """Update satisfaction from consecutive non-moving periods."""
         if self.moved_this_step:
             self.steps_since_move = 0
         else:
@@ -321,8 +364,3 @@ class SchellingAgent(CellAgent):
 
         if self.satisfied:
             self.model.satisfied_count += 1
-
-    def step(self) -> None:
-        """Search for a satisfactory destination every period."""
-        self.moved_this_step = False
-        self.attempt_move()

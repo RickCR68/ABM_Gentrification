@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from collections import defaultdict
 from itertools import accumulate
 
 import numpy as np
@@ -10,14 +11,25 @@ from mesa.datacollection import DataCollector
 from mesa.discrete_space import OrthogonalMooreGrid
 
 from .agents import SchellingAgent
-from .destination_choice import RandomSatisficingChoice
-from .neighbourhood_state import NeighborhoodStateManager
+from .game import (
+    ApplicationGamePolicy,
+    LogitQRESolver,
+    MeanResidentUtilityPolicy,
+    TransferPayoffStructure,
+)
+from .destination_choice import (
+    RandomSatisficingChoice,
+)
+from .nash import TwoByTwoNashSolver
+from .neighbourhood_state import (
+    NeighborhoodStateManager,
+)
 from .neighborhoods import MooreNeighborhood
 from .utility import IncomeNeighborhoodUtility
 
 
 class GentrificationModel(Model):
-    """Agent-based model of income dynamics and residential relocation."""
+    """Agent-based model with relocation games and NE diagnostics."""
 
     def __init__(
         self,
@@ -57,6 +69,18 @@ class GentrificationModel(Model):
         income_growth_scaling: float = 0.01,
         income_volatility: float = 0.05,
 
+        moving_cost: float = 0.05,
+        rejection_cost: float = 0.05,
+
+        neighborhood_risk_aversion: float = 0.5,
+        neighborhood_rationality: float = 5.0,
+
+        qre_tolerance: float = 1e-10,
+        qre_maximum_iterations: int = 1000,
+        qre_damping: float = 0.5,
+
+        keep_game_history: bool = True,
+
         rng=None,
     ) -> None:
         super().__init__(rng=rng)
@@ -87,20 +111,30 @@ class GentrificationModel(Model):
             steps_until_satisfied=steps_until_satisfied,
             income_growth_scaling=income_growth_scaling,
             income_volatility=income_volatility,
+            moving_cost=moving_cost,
+            rejection_cost=rejection_cost,
+            neighborhood_risk_aversion=(
+                neighborhood_risk_aversion
+            ),
+            neighborhood_rationality=(
+                neighborhood_rationality
+            ),
+            qre_tolerance=qre_tolerance,
+            qre_maximum_iterations=(
+                qre_maximum_iterations
+            ),
+            qre_damping=qre_damping,
         )
         #????
         self.affordability_share = affordability_share
 
-        # Grid and population parameters
         self.width = width
         self.height = height
         self.density = density
 
-        # Initial income bounds
         self.initial_income_min = initial_income_min
         self.initial_income_max = initial_income_max
 
-        # Heterogeneous household parameter bounds
         self.discount_factor_min = discount_factor_min
         self.discount_factor_max = discount_factor_max
 
@@ -113,31 +147,59 @@ class GentrificationModel(Model):
         self.income_similarity_min = income_similarity_min
         self.income_similarity_max = income_similarity_max
 
-        # Global satisficing parameters
-        self.satisficing_threshold = satisficing_threshold
+        self.satisficing_threshold = (
+            satisficing_threshold
+        )
         self.minimum_absolute_improvement = (
             minimum_absolute_improvement
         )
 
         # Vision parameters
         self.vision_income_scale = vision_income_scale
-        self.maximum_vision_radius = maximum_vision_radius
+        self.maximum_vision_radius = (
+            maximum_vision_radius
+        )
 
-        # Residence-duration satisfaction
-        self.steps_until_satisfied = steps_until_satisfied
+        self.steps_until_satisfied = (
+            steps_until_satisfied
+        )
 
-        # Income and rent dynamics
-        self.income_growth_scaling = income_growth_scaling
+        self.income_growth_scaling = (
+            income_growth_scaling
+        )
         self.income_volatility = income_volatility
-        self.rent_adjustment_rate = rent_adjustment_rate
+        self.rent_adjustment_rate = (
+            rent_adjustment_rate
+        )
 
-        # Step-level counters
+        self.moving_cost = moving_cost
+        self.rejection_cost = rejection_cost
+
+        self.neighborhood_risk_aversion = (
+            neighborhood_risk_aversion
+        )
+        self.neighborhood_rationality = (
+            neighborhood_rationality
+        )
+
+        self.keep_game_history = keep_game_history
+        self.game_history = []
+        self.game_records_this_step = []
+
         self.satisfied_count = 0
         self.move_attempts = 0
         self.successful_moves = 0
         self.failed_searches = 0
+        self.voluntary_stays = 0
+        self.destination_conflicts = 0
 
-        # Spatial environment
+        self.move_accept_outcomes = 0
+        self.move_reject_outcomes = 0
+        self.stay_accept_outcomes = 0
+        self.stay_reject_outcomes = 0
+
+        self.qre_nonconvergence_count = 0
+
         self.grid = OrthogonalMooreGrid(
             dimensions=(width, height),
             torus=True,
@@ -145,32 +207,64 @@ class GentrificationModel(Model):
             random=self.random,
         )
 
-        self.neighborhood_definition = MooreNeighborhood(
-            radius=neighborhood_radius,
+        self.neighborhood_definition = (
+            MooreNeighborhood(
+                radius=neighborhood_radius,
+            )
         )
 
         self._create_property_layers()
 
-        # Modular policies and state managers
-        self.neighborhood_state = NeighborhoodStateManager(
-            neighborhood_definition=(
-                self.neighborhood_definition
-            ),
-            rent_adjustment_rate=rent_adjustment_rate,
+        self.neighborhood_state = (
+            NeighborhoodStateManager(
+                neighborhood_definition=(
+                    self.neighborhood_definition
+                ),
+                rent_adjustment_rate=(
+                    rent_adjustment_rate
+                ),
+            )
         )
 
-        self.utility_policy = IncomeNeighborhoodUtility(
-            affordability_share=self.affordability_share,
-            income_growth_scaling=income_growth_scaling,
+        self.utility_policy = (
+            IncomeNeighborhoodUtility(
+                affordability_share=(
+                    self.affordability_share
+                ),
+                income_growth_scaling=(
+                    income_growth_scaling
+                ),
+                infeasible_utility=-1e6,
+            )
         )
 
         self.destination_choice_policy = (
             RandomSatisficingChoice()
         )
 
-        self.datacollector = self._create_datacollector()
+        self.application_game_policy = (
+            ApplicationGamePolicy(
+                neighborhood_utility_policy=(
+                    MeanResidentUtilityPolicy()
+                ),
+                payoff_structure=(
+                    TransferPayoffStructure()
+                ),
+                qre_solver=LogitQRESolver(
+                    tolerance=qre_tolerance,
+                    maximum_iterations=(
+                        qre_maximum_iterations
+                    ),
+                    damping=qre_damping,
+                ),
+                nash_solver=TwoByTwoNashSolver(),
+            )
+        )
 
-        # Create households and initialise neighbourhood state
+        self.datacollector = (
+            self._create_datacollector()
+        )
+
         self._create_agents()
 
         self.neighborhood_state.initialize_income_layer(
@@ -178,12 +272,10 @@ class GentrificationModel(Model):
         )
 
         self._update_agent_states()
-        self._update_satisfaction()
 
         self.datacollector.collect(self)
 
     def _create_property_layers(self) -> None:
-        """Create rent and current neighbourhood-income layers."""
         self.grid.create_property_layer(
             name="rent",
             default_value=0.0,
@@ -215,11 +307,17 @@ class GentrificationModel(Model):
                 "move_attempts": "move_attempts",
                 "successful_moves": "successful_moves",
                 "failed_searches": "failed_searches",
+                "voluntary_stays": "voluntary_stays",
+                "destination_conflicts": (
+                    "destination_conflicts"
+                ),
                 "movement_success_rate": (
                     self.movement_success_rate
                 ),
 
-                "city_mean_income": self.city_mean_income,
+                "city_mean_income": (
+                    self.city_mean_income
+                ),
                 "mean_neighbor_income": (
                     self.mean_neighbor_income
                 ),
@@ -235,6 +333,43 @@ class GentrificationModel(Model):
                 "gini_coefficient": (
                     self.gini_coefficient
                 ),
+
+                "mean_qre_move_probability": (
+                    self.mean_qre_move_probability
+                ),
+                "mean_qre_accept_probability": (
+                    self.mean_qre_accept_probability
+                ),
+                "mean_ne_move_probability": (
+                    self.mean_ne_move_probability
+                ),
+                "mean_qre_ne_move_gap": (
+                    self.mean_qre_ne_move_gap
+                ),
+                "mean_delta_neighborhood_utility": (
+                    self.mean_delta_neighborhood_utility
+                ),
+
+                "move_accept_outcomes": (
+                    "move_accept_outcomes"
+                ),
+                "move_reject_outcomes": (
+                    "move_reject_outcomes"
+                ),
+                "stay_accept_outcomes": (
+                    "stay_accept_outcomes"
+                ),
+                "stay_reject_outcomes": (
+                    "stay_reject_outcomes"
+                ),
+
+                "qre_nonconvergence_count": (
+                    "qre_nonconvergence_count"
+                ),
+
+                "ne_following_rate": (
+                    self.ne_following_rate
+                ),
             },
             agent_reporters={
                 "initial_income": "initial_income",
@@ -243,7 +378,9 @@ class GentrificationModel(Model):
                 "income_similarity_preference": (
                     "income_similarity_preference"
                 ),
-                "discount_factor": "discount_factor",
+                "discount_factor": (
+                    "discount_factor"
+                ),
                 "risk_aversion": "risk_aversion",
                 "rationality": "rationality",
 
@@ -252,51 +389,37 @@ class GentrificationModel(Model):
                 "current_utility": "current_utility",
                 "current_value": "current_value",
 
-                "current_location_affordable": (
-                    "current_location_affordable"
+                "steps_since_move": (
+                    "steps_since_move"
                 ),
-
-                "steps_since_move": "steps_since_move",
                 "satisfied": "satisfied",
-                "moved_this_step": "moved_this_step",
-
-                "last_move_successful": (
-                    "last_move_successful"
+                "moved_this_step": (
+                    "moved_this_step"
                 ),
-                "last_value_improvement": (
-                    "last_value_improvement"
+
+                "last_qre_move_probability": (
+                    "last_qre_move_probability"
+                ),
+                "last_qre_accept_probability": (
+                    "last_qre_accept_probability"
+                ),
+                "last_ne_move_probability": (
+                    "last_ne_move_probability"
+                ),
+                "last_qre_ne_move_gap": (
+                    "last_qre_ne_move_gap"
                 ),
             },
         )
 
     @staticmethod
     def _validate_parameters(
-        *,
-        width: int,
-        height: int,
-        density: float,
-        neighborhood_radius: int,
-        affordability_share: float,
-        rent_adjustment_rate: float,
-        initial_income_min: float,
-        initial_income_max: float,
-        discount_factor_min: float,
-        discount_factor_max: float,
-        risk_aversion_min: float,
-        risk_aversion_max: float,
-        rationality_min: float,
-        rationality_max: float,
-        income_similarity_min: float,
-        income_similarity_max: float,
-        satisficing_threshold: float,
-        minimum_absolute_improvement: float,
-        vision_income_scale: float,
-        maximum_vision_radius: int,
-        steps_until_satisfied: int,
-        income_growth_scaling: float,
-        income_volatility: float,
+        **parameters,
     ) -> None:
-        """Validate model parameters."""
+        width = parameters["width"]
+        height = parameters["height"]
+        density = parameters["density"]
+
         if width <= 0 or height <= 0:
             raise ValueError(
                 "width and height must be positive."
@@ -307,201 +430,246 @@ class GentrificationModel(Model):
                 "density must lie between 0 and 1."
             )
 
-        if neighborhood_radius < 1:
+        if parameters["neighborhood_radius"] < 1:
             raise ValueError(
                 "neighborhood_radius must be at least 1."
             )
 
-        if affordability_share < 0.0:
+        if parameters["affordability_share"] < 0.0:
             raise ValueError(
                 "affordability_share must be non-negative."
             )
 
-        if not 0.0 < rent_adjustment_rate < 1.0:
+        if not (
+            0.0
+            < parameters["rent_adjustment_rate"]
+            < 1.0
+        ):
             raise ValueError(
-                "rent_adjustment_rate must be strictly "
-                "between 0 and 1."
+                "rent_adjustment_rate must lie strictly between 0 and 1."
             )
 
-        if initial_income_min <= 0.0:
+        if parameters["initial_income_min"] <= 0.0:
             raise ValueError(
                 "initial_income_min must be positive."
             )
 
-        if initial_income_min > initial_income_max:
+        if (
+            parameters["initial_income_min"]
+            > parameters["initial_income_max"]
+        ):
             raise ValueError(
-                "initial_income_min cannot exceed "
-                "initial_income_max."
+                "initial_income_min cannot exceed initial_income_max."
             )
+
+        for prefix in (
+            "discount_factor",
+            "risk_aversion",
+            "rationality",
+            "income_similarity",
+        ):
+            minimum = parameters[f"{prefix}_min"]
+            maximum = parameters[f"{prefix}_max"]
+
+            if minimum > maximum:
+                raise ValueError(
+                    f"{prefix}_min cannot exceed {prefix}_max."
+                )
 
         if not (
             0.0
-            <= discount_factor_min
-            <= discount_factor_max
+            <= parameters["discount_factor_min"]
+            <= parameters["discount_factor_max"]
             <= 1.0
         ):
             raise ValueError(
-                "Discount-factor bounds must satisfy "
-                "0 <= min <= max <= 1."
+                "Discount factors must lie in [0, 1]."
             )
 
         if not (
             0.0
-            <= risk_aversion_min
-            <= risk_aversion_max
+            <= parameters["risk_aversion_min"]
+            <= parameters["risk_aversion_max"]
             < 5.0
         ):
             raise ValueError(
-                "Risk-aversion bounds must satisfy "
-                "0 <= min <= max < 5."
+                "Household risk aversion must satisfy 0 <= rho < 5."
             )
 
-        if not (
-            0.0
-            <= rationality_min
-            <= rationality_max
-        ):
+        if parameters["rationality_min"] < 0.0:
             raise ValueError(
-                "Rationality bounds must satisfy "
-                "0 <= min <= max."
+                "rationality_min must be non-negative."
             )
 
-        if income_similarity_min < 0.0:
+        if parameters["income_similarity_min"] < 0.0:
             raise ValueError(
                 "income_similarity_min must be non-negative."
             )
 
-        if income_similarity_min > income_similarity_max:
-            raise ValueError(
-                "income_similarity_min cannot exceed "
-                "income_similarity_max."
-            )
+        for name in (
+            "satisficing_threshold",
+            "minimum_absolute_improvement",
+            "vision_income_scale",
+            "income_growth_scaling",
+            "income_volatility",
+            "moving_cost",
+            "rejection_cost",
+            "neighborhood_rationality",
+        ):
+            if parameters[name] < 0.0:
+                raise ValueError(
+                    f"{name} must be non-negative."
+                )
 
-        if satisficing_threshold < 0.0:
-            raise ValueError(
-                "satisficing_threshold must be non-negative."
-            )
-
-        if minimum_absolute_improvement < 0.0:
-            raise ValueError(
-                "minimum_absolute_improvement must be "
-                "non-negative."
-            )
-
-        if vision_income_scale < 0.0:
-            raise ValueError(
-                "vision_income_scale must be non-negative."
-            )
-
-        if maximum_vision_radius < 1:
+        if parameters["maximum_vision_radius"] < 1:
             raise ValueError(
                 "maximum_vision_radius must be at least 1."
             )
 
-        if steps_until_satisfied < 1:
+        if parameters["steps_until_satisfied"] < 1:
             raise ValueError(
                 "steps_until_satisfied must be at least 1."
             )
 
-        if income_growth_scaling < 0.0:
+        if not (
+            0.0
+            <= parameters[
+                "neighborhood_risk_aversion"
+            ]
+            < 1.0
+        ):
             raise ValueError(
-                "income_growth_scaling must be non-negative."
+                "neighborhood_risk_aversion must satisfy 0 <= rho_n < 1."
             )
 
-        if income_volatility < 0.0:
+        if parameters["qre_tolerance"] <= 0.0:
             raise ValueError(
-                "income_volatility must be non-negative."
+                "qre_tolerance must be positive."
+            )
+
+        if parameters["qre_maximum_iterations"] < 1:
+            raise ValueError(
+                "qre_maximum_iterations must be positive."
+            )
+
+        if not (
+            0.0 < parameters["qre_damping"] <= 1.0
+        ):
+            raise ValueError(
+                "qre_damping must satisfy 0 < damping <= 1."
             )
 
     def _create_agents(self) -> None:
-        """Populate cells with heterogeneous households."""
         for cell in self.grid.all_cells:
             if self.random.random() >= self.density:
                 continue
 
-            income = self.random.uniform(
-                self.initial_income_min,
-                self.initial_income_max,
-            )
-
-            income_similarity_preference = (
-                self.random.uniform(
-                    self.income_similarity_min,
-                    self.income_similarity_max,
-                )
-            )
-
-            discount_factor = self.random.uniform(
-                self.discount_factor_min,
-                self.discount_factor_max,
-            )
-
-            risk_aversion = self.random.uniform(
-                self.risk_aversion_min,
-                self.risk_aversion_max,
-            )
-
-            rationality = self.random.uniform(
-                self.rationality_min,
-                self.rationality_max,
-            )
-
             SchellingAgent(
                 model=self,
                 cell=cell,
-                income=income,
-                income_similarity_preference=(
-                    income_similarity_preference
+                income=self.random.uniform(
+                    self.initial_income_min,
+                    self.initial_income_max,
                 ),
-                discount_factor=discount_factor,
-                risk_aversion=risk_aversion,
-                rationality=rationality,
+                income_similarity_preference=(
+                    self.random.uniform(
+                        self.income_similarity_min,
+                        self.income_similarity_max,
+                    )
+                ),
+                discount_factor=self.random.uniform(
+                    self.discount_factor_min,
+                    self.discount_factor_max,
+                ),
+                risk_aversion=self.random.uniform(
+                    self.risk_aversion_min,
+                    self.risk_aversion_max,
+                ),
+                rationality=self.random.uniform(
+                    self.rationality_min,
+                    self.rationality_max,
+                ),
             )
 
     def _update_agent_states(self) -> None:
-        """Recalculate utility at each household's current location."""
         self.agents.do("assign_state")
 
     def _update_satisfaction(self) -> None:
-        """Update duration-based household satisfaction."""
         self.satisfied_count = 0
         self.agents.do("update_satisfaction")
 
-    def step(self) -> None:
-        """Advance the model by one time step."""
+    def _reset_step_statistics(self) -> None:
         self.move_attempts = 0
         self.successful_moves = 0
         self.failed_searches = 0
+        self.voluntary_stays = 0
+        self.destination_conflicts = 0
 
-        # 1. Household incomes evolve.
+        self.move_accept_outcomes = 0
+        self.move_reject_outcomes = 0
+        self.stay_accept_outcomes = 0
+        self.stay_reject_outcomes = 0
+
+        self.qre_nonconvergence_count = 0
+        self.game_records_this_step = []
+
+    def _execute_simultaneous_moves(self) -> None:
+        """Resolve competing claims to initially empty destinations."""
+        claims = defaultdict(list)
+
+        for agent in self.agents:
+            if agent.pending_destination is None:
+                continue
+
+            coordinate = (
+                agent.pending_destination
+                .cell
+                .coordinate
+            )
+
+            claims[coordinate].append(agent)
+
+        for claimants in claims.values():
+            winner = self.random.choice(claimants)
+            winner.execute_pending_move()
+
+            for agent in claimants:
+                if agent is winner:
+                    continue
+
+                agent.cancel_pending_move_due_to_conflict()
+
+    def step(self) -> None:
+        self._reset_step_statistics()
+
+        # 1. Income changes.
         self.agents.shuffle_do("change_income")
 
-        # 2. Recalculate local mean income after income changes.
+        # 2. Refresh local incomes and rents.
         self.neighborhood_state.refresh_current_income(
             self
         )
-
-        # 3. Rents adjust toward current local income.
         self.neighborhood_state.update_rents(self)
 
-        # 4. Evaluate agents at their current locations.
+        # 3. Evaluate the common pre-move state.
         self._update_agent_states()
 
-        # 5. Every agent searches and may move.
-        self.agents.shuffle_do("step")
+        # 4. Every agent searches and plays its game without moving.
+        self.agents.shuffle_do(
+            "prepare_move_decision"
+        )
 
-        # 6. Movement changes neighbourhood composition.
+        # 5. Resolve destination conflicts and execute moves together.
+        self._execute_simultaneous_moves()
+
+        # 6. Refresh the post-move spatial state.
         self.neighborhood_state.refresh_current_income(
             self
         )
-
-        # 7. Recalculate utility at final locations.
         self._update_agent_states()
-
-        # 8. Update steps-since-move satisfaction.
         self._update_satisfaction()
 
-        # 9. Collect one observation.
+        # 7. Record aggregate outputs.
         self.datacollector.collect(self)
 
     def percentage_satisfied(self) -> float:
@@ -533,12 +701,10 @@ class GentrificationModel(Model):
             return 0.0
 
         return float(
-            np.mean(
-                [
-                    agent.income
-                    for agent in self.agents
-                ]
-            )
+            np.mean([
+                agent.income
+                for agent in self.agents
+            ])
         )
 
     def mean_rent(self) -> float:
@@ -549,10 +715,16 @@ class GentrificationModel(Model):
 
     def mean_neighbor_income(self) -> float:
         """Return the spatial mean of local mean-income values."""
-        return float(
-            np.mean(
-                self.grid.mean_neighbor_income.data
-            )
+        values = (
+            self.grid.mean_neighbor_income.data
+        )
+
+        nonempty = values[values > 0.0]
+
+        return (
+            float(np.mean(nonempty))
+            if nonempty.size > 0
+            else 0.0
         )
 
     def mean_utility(self) -> float:
@@ -560,7 +732,9 @@ class GentrificationModel(Model):
         values = [
             agent.current_utility
             for agent in self.agents
-            if math.isfinite(agent.current_utility)
+            if math.isfinite(
+                agent.current_utility
+            )
         ]
 
         return (
@@ -589,12 +763,10 @@ class GentrificationModel(Model):
             return 0.0
 
         return float(
-            np.mean(
-                [
-                    agent.vision_radius
-                    for agent in self.agents
-                ]
-            )
+            np.mean([
+                agent.vision_radius
+                for agent in self.agents
+            ])
         )
 
     def rent_income_timescale_ratio(self) -> float:
@@ -636,3 +808,102 @@ class GentrificationModel(Model):
         )
 
         return gini_coefficient
+
+    def mean_qre_move_probability(self) -> float:
+        if not self.game_records_this_step:
+            return 0.0
+
+        return float(
+            np.mean([
+                record.qre.p_move
+                for record in self.game_records_this_step
+            ])
+        )
+
+    def mean_qre_accept_probability(self) -> float:
+        if not self.game_records_this_step:
+            return 0.0
+
+        return float(
+            np.mean([
+                record.qre.p_accept
+                for record in self.game_records_this_step
+            ])
+        )
+
+    def mean_ne_move_probability(self) -> float:
+        values = [
+            record.nash.closest_move_probability
+            for record in self.game_records_this_step
+            if math.isfinite(
+                record.nash.closest_move_probability
+            )
+        ]
+
+        return (
+            float(np.mean(values))
+            if values
+            else 0.0
+        )
+
+    def mean_qre_ne_move_gap(self) -> float:
+        values = [
+            record.nash.move_probability_gap
+            for record in self.game_records_this_step
+            if math.isfinite(
+                record.nash.move_probability_gap
+            )
+        ]
+
+        return (
+            float(np.mean(values))
+            if values
+            else 0.0
+        )
+
+    def mean_delta_neighborhood_utility(
+        self,
+    ) -> float:
+        if not self.game_records_this_step:
+            return 0.0
+
+        return float(
+            np.mean([
+                record.payoffs
+                .neighborhood_change
+                .delta_utility
+                for record in self.game_records_this_step
+            ])
+        )
+
+    def ne_following_rate(
+        self,
+        tolerance: float = 0.05,
+    ) -> float:
+        """Fraction of games whose QRE move probability is close to an NE.
+
+        A game counts as NE-following when
+
+            |P_QRE(MOVE) - P_NE(MOVE)| <= tolerance.
+        """
+        valid_records = [
+            record
+            for record in self.game_records_this_step
+            if math.isfinite(
+                record.nash.move_probability_gap
+            )
+        ]
+
+        if not valid_records:
+            return 0.0
+
+        following_count = sum(
+            record.nash.move_probability_gap
+            <= tolerance
+            for record in valid_records
+        )
+
+        return (
+            following_count
+            / len(valid_records)
+        )
