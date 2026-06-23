@@ -56,14 +56,15 @@ def run_single_simulation(args):
         vision_income_scale=vision_income_scale,
         satisficing_threshold=satisficing_threshold,
         rent_adjustment_rate=rent_adjustment_rate,
-        rng=42 + run_id
+        rng=42 + run_id,
+        keep_agents=False
     )
     
     for _ in range(SIM_STEPS):
         model.step()
         
     df_model_vars = model.datacollector.get_model_vars_dataframe()
-    df_agent_vars = model.datacollector.get_agent_vars_dataframe()
+    #df_agent_vars = model.datacollector.get_agent_vars_dataframe()
     
     # Graceful error handling for GPFS cluster file-system latency
     try:
@@ -72,7 +73,7 @@ def run_single_simulation(args):
         pass
 
     df_model_vars.to_csv(os.path.join(OUTPUT_DIR, f"model_run_{run_id}.csv"), index=True)
-    df_agent_vars.to_csv(os.path.join(OUTPUT_DIR, f"agent_run_{run_id}.csv"), index=True)
+    #df_agent_vars.to_csv(os.path.join(OUTPUT_DIR, f"agent_run_{run_id}.csv"), index=True)
     
     outputs = {
         'run_id': run_id,
