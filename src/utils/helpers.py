@@ -1,3 +1,6 @@
+from itertools import accumulate
+
+
 def generate_vibrant_red_blue_gradient(val):
     # val ranges from 0.0 to 1.0
     g = 0  # Keep green completely turned off to avoid yellows/greens

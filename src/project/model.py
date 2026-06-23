@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 from collections import defaultdict
+from itertools import accumulate
 
 import numpy as np
 
@@ -124,6 +125,8 @@ class GentrificationModel(Model):
             ),
             qre_damping=qre_damping,
         )
+        #????
+        self.affordability_share = affordability_share
 
         self.width = width
         self.height = height
@@ -151,6 +154,7 @@ class GentrificationModel(Model):
             minimum_absolute_improvement
         )
 
+        # Vision parameters
         self.vision_income_scale = vision_income_scale
         self.maximum_vision_radius = (
             maximum_vision_radius
@@ -225,12 +229,12 @@ class GentrificationModel(Model):
         self.utility_policy = (
             IncomeNeighborhoodUtility(
                 affordability_share=(
-                    affordability_share
+                    self.affordability_share
                 ),
                 income_growth_scaling=(
                     income_growth_scaling
                 ),
-                infeasible_utility=-1e6,
+                infeasible_utility=-0,
             )
         )
 
@@ -292,6 +296,7 @@ class GentrificationModel(Model):
         )
 
     def _create_datacollector(self) -> DataCollector:
+        """Construct the Mesa data collector."""
         return DataCollector(
             model_reporters={
                 "satisfied_count": "satisfied_count",
@@ -324,6 +329,9 @@ class GentrificationModel(Model):
 
                 "rent_income_timescale_ratio": (
                     self.rent_income_timescale_ratio
+                ),
+                "gini_coefficient": (
+                    self.gini_coefficient
                 ),
 
                 "mean_qre_move_probability": (
@@ -478,15 +486,15 @@ class GentrificationModel(Model):
                 "Discount factors must lie in [0, 1]."
             )
 
-        if not (
-            0.0
-            <= parameters["risk_aversion_min"]
-            <= parameters["risk_aversion_max"]
-            < 5.0
-        ):
-            raise ValueError(
-                "Household risk aversion must satisfy 0 <= rho < 5."
-            )
+        # if not (
+        #     # 0.0
+        #     # <= parameters["risk_aversion_min"]
+        #     parameters["risk_aversion_max"]
+        #     < 1.0
+        # ):
+        #     raise ValueError(
+        #         "Household risk aversion must satisfy 0 <= rho < 999."
+        #     )
 
         if parameters["rationality_min"] < 0.0:
             raise ValueError(
@@ -660,11 +668,13 @@ class GentrificationModel(Model):
         )
         self._update_agent_states()
         self._update_satisfaction()
+        self._update_percentiles()
 
         # 7. Record aggregate outputs.
         self.datacollector.collect(self)
 
     def percentage_satisfied(self) -> float:
+        """Return the percentage of duration-satisfied households."""
         population = len(self.agents)
 
         if population == 0:
@@ -677,6 +687,7 @@ class GentrificationModel(Model):
         )
 
     def movement_success_rate(self) -> float:
+        """Return the fraction of searches producing a move."""
         if self.move_attempts == 0:
             return 0.0
 
@@ -686,6 +697,7 @@ class GentrificationModel(Model):
         )
 
     def city_mean_income(self) -> float:
+        """Return mean household income across the city."""
         if len(self.agents) == 0:
             return 0.0
 
@@ -697,11 +709,13 @@ class GentrificationModel(Model):
         )
 
     def mean_rent(self) -> float:
+        """Return mean rent across all grid cells."""
         return float(
             np.mean(self.grid.rent.data)
         )
 
     def mean_neighbor_income(self) -> float:
+        """Return the spatial mean of local mean-income values."""
         values = (
             self.grid.mean_neighbor_income.data
         )
@@ -715,6 +729,7 @@ class GentrificationModel(Model):
         )
 
     def mean_utility(self) -> float:
+        """Return mean finite raw utility."""
         values = [
             agent.current_utility
             for agent in self.agents
@@ -730,6 +745,7 @@ class GentrificationModel(Model):
         )
 
     def mean_value(self) -> float:
+        """Return mean finite signed-CRRA value."""
         values = [
             agent.current_value
             for agent in self.agents
@@ -743,6 +759,7 @@ class GentrificationModel(Model):
         )
 
     def mean_vision(self) -> float:
+        """Return mean fixed household vision radius."""
         if len(self.agents) == 0:
             return 0.0
 
@@ -752,7 +769,7 @@ class GentrificationModel(Model):
                 for agent in self.agents
             ])
         )
-    
+
     def rent_income_timescale_ratio(self) -> float:
         """Return tau = delta / eta."""
         if self.income_growth_scaling == 0.0:
@@ -762,6 +779,36 @@ class GentrificationModel(Model):
             self.rent_adjustment_rate
             / self.income_growth_scaling
         )
+
+    def gini_coefficient(self):
+        """Calculate the Gini coefficient for household incomes."""
+        incomes = [agent.income for agent in self.agents]
+
+        if not incomes:
+            return 0.0
+
+        sorted_incomes = sorted(incomes)
+        n = len(incomes)
+        cumulative_incomes = [0] + list(
+            accumulate(sorted_incomes)
+        )
+
+        total_income = cumulative_incomes[-1]
+        if total_income == 0:
+            return 0.0
+
+        gini_numerator = sum(
+            (i + 1) * income
+            for i, income in enumerate(sorted_incomes)
+        )
+        gini_denominator = n * total_income
+
+        gini_coefficient = (
+                (2 * gini_numerator) / gini_denominator
+                - (n + 1) / n
+        )
+
+        return gini_coefficient
 
     def mean_qre_move_probability(self) -> float:
         if not self.game_records_this_step:
@@ -829,7 +876,7 @@ class GentrificationModel(Model):
                 for record in self.game_records_this_step
             ])
         )
-    
+
     def ne_following_rate(
         self,
         tolerance: float = 0.05,
@@ -861,3 +908,12 @@ class GentrificationModel(Model):
             following_count
             / len(valid_records)
         )
+
+    def _update_percentiles(self):
+        incomes = np.array([a.income for a in self.agents])
+
+        self.income_thresholds = np.quantile(
+            incomes,
+            [0.01, 0.15, 0.4, 0.6, 0.85, 0.99]
+        )
+        self.agents.do("update_visuals")

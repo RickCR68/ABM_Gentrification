@@ -145,6 +145,9 @@ class NeighborhoodStateManager:
                 mean_y_j - R_j^(n-1)
             ).
         """
+
+        affordability_share = model.affordability_share
+
         rents = model.grid.rent.data
 
         mean_incomes = (
@@ -153,8 +156,9 @@ class NeighborhoodStateManager:
 
         delta = self.rent_adjustment_rate
 
+        #TODO: make rent cap variable
         rents[:] = rents + delta * (
-            mean_incomes - rents
+            affordability_share*mean_incomes - rents
         )
 
     def mean_neighborhood_income(
