@@ -13,13 +13,19 @@ from src.project.model import GentrificationModel
 # 1. Define the GSA Problem Space
 GSA_PROBLEM = {
     'num_vars': 5,
-    'names': ['theta', 'risk_aversion', 'discount_factor', 'rationality', 'vision_radius'],
+    'names': [
+        'moving_cost', 
+        'rejection_cost', 
+        'vision_income_scale', 
+        'satisficing_threshold', 
+        'rent_adjustment_rate'
+    ],
     'bounds': [
-        [0.0, 2.0],   # Theta upper bound
-        [0.0, 0.8],   # Risk_aversion upper bound
-        [0.0, 1.0],   # discount_factor (\beta)
-        [1.0, 10.0],  # Upper bound to 10.0
-        [1, 10]       # vision_radius (v) - Treated as continuous for sampling
+        [0.0, 2.0],   # moving_cost: matches app.py default and text input range
+        [0.0, 2.0],   # rejection_cost: matches app.py default and text input range
+        [0.0, 20.0],  # vision_income_scale: matches app.py slider limits (0.0 to 20.0)
+        [0.0, 1.0],   # satisficing_threshold: matches app.py slider limits (0.0 to 1.0)
+        [0.001, 0.1]  # rent_adjustment_rate: matches app.py slider limits (0.0 to 0.1)
     ]
 }
 
@@ -32,23 +38,28 @@ def run_single_simulation(args):
     the input parameter values and the final macroscopic system metrics.
     """
     param_set, run_id = args
-    theta, risk_aversion, discount_factor, rationality, vision_radius = param_set # **vision income not vision radius
+    (moving_cost, 
+     rejection_cost, 
+     vision_income_scale, 
+     satisficing_threshold, 
+     rent_adjustment_rate) = param_set
     
     # Initialize your model with the sampled parameters matching model validation
     model = GentrificationModel(
-        
         width=20,
         height=20,
-        density=0.95,
-        income_similarity_min=theta,
-        income_similarity_max=theta,
-        risk_aversion_min=risk_aversion,
-        risk_aversion_max=risk_aversion,
-        discount_factor_min=discount_factor,
-        discount_factor_max=discount_factor,
-        rationality_min=rationality,
-        rationality_max=rationality,
-        maximum_vision_radius=int(np.round(vision_radius)),
+        density=0.8,                # Matched with app.py default setup
+        neighborhood_radius=2,      # Fixed at 2 per your agreements
+        affordability_share=0.8,     # Set at 80% (Run 1 of Low/Med/High tests)
+        
+        # Actively Sampled GSA Parameters:
+        moving_cost=moving_cost,
+        rejection_cost=rejection_cost,
+        vision_income_scale=vision_income_scale,
+        satisficing_threshold=satisficing_threshold,
+        rent_adjustment_rate=rent_adjustment_rate,
+        
+        # Other parameters fall back automatically to standard configurations
     )
     
     # Execute the simulation run
@@ -62,11 +73,11 @@ def run_single_simulation(args):
     outputs = {
         'run_id': run_id,
         # --- Tracked Input Parameters ---
-        'theta': theta,
-        'risk_aversion': risk_aversion,
-        'discount_factor': discount_factor,
-        'rationality': rationality,
-        'vision_radius': int(np.round(vision_radius)),
+        'moving_cost': moving_cost,
+        'rejection_cost': rejection_cost,
+        'vision_income_scale': vision_income_scale,
+        'satisficing_threshold': satisficing_threshold,
+        'rent_adjustment_rate': rent_adjustment_rate,
         # --- Tracked Output Metrics ---
         'pct_satisfied': df_model_vars["pct_satisfied"].iloc[-1],
         'movement_success_rate': df_model_vars["movement_success_rate"].iloc[-1],
