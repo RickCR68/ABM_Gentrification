@@ -36,8 +36,8 @@ class GentrificationModel(Model):
     def __init__(
         self,
         *,
-        width: int = 20,
-        height: int = 20,
+        width: int = 11,
+        height: int = 11,
         density: float = 0.8,
 
         neighborhood_radius: int = 1,
