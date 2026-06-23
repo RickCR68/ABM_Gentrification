@@ -6,7 +6,7 @@
 #SBATCH --ntasks=4
 #SBATCH --cpus-per-task=32
 #SBATCH --time=02:00:00
-#SBATCH --partition=thin
+#SBATCH --partition=rome
 
 # 1. Load required system modules (adjust if your setup requires specific Python modules)
 module load 2023

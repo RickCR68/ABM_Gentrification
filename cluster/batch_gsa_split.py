@@ -103,13 +103,12 @@ if __name__ == "__main__":
     # Create all tasks matching their universal global matrix run_id indices
     all_tasks = [(param_values[i], i) for i in range(total_tasks)]
     
-    # Slice the task list into 4 exact quadrants
-    chunk_size = total_tasks // 4
+    chunk_size = total_tasks // 8
     start_idx = (CURRENT_PART - 1) * chunk_size
-    end_idx = start_idx + chunk_size if CURRENT_PART < 4 else total_tasks
+    end_idx = start_idx + chunk_size if CURRENT_PART < 8 else total_tasks
     
     active_tasks = all_tasks[start_idx:end_idx]
-    print(f"Executing Part {CURRENT_PART}/{4}. Processing tasks index {start_idx} to {end_idx} ({len(active_tasks)} simulations)...")
+    print(f"Executing Part {CURRENT_PART}/{8}. Processing tasks index {start_idx} to {end_idx} ({len(active_tasks)} simulations)...")
     
     # 3. Distributed Execution via Process Pool
     max_workers = int(os.getenv("SLURM_CPUS_PER_TASK", os.cpu_count()))
