@@ -295,6 +295,12 @@ class GentrificationModel(Model):
             dtype=float,
         )
 
+        self.grid.create_property_layer(
+            name="neighbor_income_variance",
+            default_value=0.0,
+            dtype=float,
+        )
+
     def _create_datacollector(self) -> DataCollector:
         """Construct the Mesa data collector."""
         return DataCollector(
@@ -320,6 +326,9 @@ class GentrificationModel(Model):
                 ),
                 "mean_neighbor_income": (
                     self.mean_neighbor_income
+                ),
+                "mean_neighbor_income_variance": (
+                    self.mean_neighbor_income_variance
                 ),
                 "mean_rent": self.mean_rent,
 
@@ -727,6 +736,21 @@ class GentrificationModel(Model):
             if nonempty.size > 0
             else 0.0
         )
+
+    def mean_neighbor_income_variance(self) -> float:
+        """Return the spatial variance of local income variance values."""
+        values = (
+            self.grid.neighbor_income_variance.data
+        )
+
+        nonempty = values[values > 0.0]
+
+        return (
+            float(np.mean(nonempty))
+            if nonempty.size > 0
+            else 0.0
+        )
+
 
     def mean_utility(self) -> float:
         """Return mean finite raw utility."""

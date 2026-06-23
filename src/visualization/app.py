@@ -107,7 +107,7 @@ def property_layer_portrayal(layer):
         )
 
 def layer_selector(layer):
-    layers = ["rent", "mean_neighbor_income", "None"]  # Your actual layer names
+    layers = ["rent", "mean_neighbor_income", "neighbor_income_variance","None"]  # Your actual layer names
     solara.Select(label="Select Property Layer",
                   value=selected_layer,
                   values=layers)
