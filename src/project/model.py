@@ -106,9 +106,7 @@ class GentrificationModel(Model):
             income_similarity_min=income_similarity_min,
             income_similarity_max=income_similarity_max,
             satisficing_threshold=satisficing_threshold,
-            minimum_absolute_improvement=(
-                minimum_absolute_improvement
-            ),
+            minimum_absolute_improvement=minimum_absolute_improvement,
             vision_income_scale=vision_income_scale,
             maximum_vision_radius=maximum_vision_radius,
             steps_until_satisfied=steps_until_satisfied,
@@ -116,20 +114,15 @@ class GentrificationModel(Model):
             income_volatility=income_volatility,
             moving_cost=moving_cost,
             rejection_cost=rejection_cost,
-            neighborhood_risk_aversion=(
-                neighborhood_risk_aversion
-            ),
-            neighborhood_rationality=(
-                neighborhood_rationality
-            ),
+            neighborhood_risk_aversion=neighborhood_risk_aversion,
+            neighborhood_rationality=neighborhood_rationality,
             qre_tolerance=qre_tolerance,
-            qre_maximum_iterations=(
-                qre_maximum_iterations
-            ),
+            qre_maximum_iterations=qre_maximum_iterations,
             qre_damping=qre_damping,
         )
         #????
         self.keep_agents = keep_agents
+
         self.affordability_share = affordability_share
 
         self.width = width
