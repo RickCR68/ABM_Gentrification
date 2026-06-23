@@ -20,6 +20,8 @@ from .game import (
 from .destination_choice import (
     RandomSatisficingChoice,
 )
+from .metrics import homeless_fraction, theil_index, moran_i, spatial_entropy, neighborhood_heterogeneity, \
+    income_mobility_indicator, segregation_index, gentrification_indicator
 from .nash import TwoByTwoNashSolver
 from .neighbourhood_state import (
     NeighborhoodStateManager,
@@ -369,6 +371,32 @@ class GentrificationModel(Model):
 
                 "ne_following_rate": (
                     self.ne_following_rate
+                ),
+
+                # Segregation and Gentrification Metrics
+                "homeless_fraction": (
+                    self.get_homeless_fraction
+                ),
+                "theil_index": (
+                    self.get_theil_index
+                ),
+                "moran_i": (
+                    self.get_moran_i
+                ),
+                "spatial_entropy": (
+                    self.get_spatial_entropy
+                ),
+                "neighborhood_heterogeneity": (
+                    self.get_neighborhood_heterogeneity
+                ),
+                "income_mobility_indicator": (
+                    self.get_income_mobility_indicator
+                ),
+                "segregation_index": (
+                    self.get_segregation_index
+                ),
+                "gentrification_indicator": (
+                    self.get_gentrification_indicator
                 ),
             },
             agent_reporters={
@@ -917,3 +945,41 @@ class GentrificationModel(Model):
             [0.01, 0.15, 0.4, 0.6, 0.85, 0.99]
         )
         self.agents.do("update_visuals")
+
+    # =================================================================
+    # Segregation and Gentrification Metrics
+    # =================================================================
+
+    def get_homeless_fraction(self) -> float:
+        """Wrapper for homeless_fraction metric."""
+        return homeless_fraction(self)
+
+    def get_theil_index(self) -> float:
+        """Wrapper for theil_index metric."""
+        return theil_index(self)
+
+    def get_moran_i(self) -> float:
+        """Wrapper for moran_i metric."""
+        return moran_i(self)
+
+    def get_spatial_entropy(self) -> float:
+        """Wrapper for spatial_entropy metric."""
+        return spatial_entropy(self)
+
+    def get_neighborhood_heterogeneity(self) -> float:
+        """Wrapper for neighborhood_heterogeneity metric."""
+        return neighborhood_heterogeneity(self)
+
+    def get_income_mobility_indicator(self) -> float:
+        """Wrapper for income_mobility_indicator metric."""
+        return income_mobility_indicator(self)
+
+    def get_segregation_index(self) -> float:
+        """Wrapper for segregation_index metric."""
+        return segregation_index(self)
+
+    def get_gentrification_indicator(self) -> float:
+        """Wrapper for gentrification_indicator metric."""
+        return gentrification_indicator(self)
+
+
