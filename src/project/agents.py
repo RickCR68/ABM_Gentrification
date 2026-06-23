@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING
 
+import numpy as np
 from mesa.discrete_space import CellAgent
 
 COLORS = [
@@ -218,16 +219,19 @@ class SchellingAgent(CellAgent):
                 )
                 / local_mean_income,
             )
+            #TODO: don't forget this change
+            spillover = (local_mean_income
+                    - self.income)/ local_mean_income
         else:
             spillover = 0.0
 
         drift = (
             self.model.income_growth_scaling
-            * spillover
+            * spillover + 0.1
         )
 
         #TODO: make volatility a function of local income variance
-        volatility = self.model.income_volatility
+        volatility = np.sqrt(self.model.grid.neighbor_income_variance.data[coordinate])
 
         shock = float(
             self.model.rng.normal(

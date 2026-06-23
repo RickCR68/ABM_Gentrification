@@ -146,8 +146,8 @@ class MeanResidentUtilityPolicy(
         candidate: DestinationCandidate,
     ) -> NeighborhoodUtilityChange:
         neighbors = (
-            agent.model.neighborhood_definition
-            .get_neighbors(candidate.cell)
+            agent.model.neighborhood_definition.get_neighbors(
+                cell=candidate.cell)
         )
 
         residents = [

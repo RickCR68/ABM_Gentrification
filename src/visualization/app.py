@@ -563,6 +563,12 @@ IncomeRentPlot = make_plot_component(
     }
 )
 
+IncomeVariancePlot = make_plot_component(
+    {
+        "mean_neighbor_income_variance": "tab:green",
+    }
+)
+
 
 UtilityPlot = make_plot_component(
     {
@@ -620,7 +626,7 @@ page = SolaraViz(
         EquilibriumProbabilityPlot,
         EquilibriumDeviationPlot,
         NEFollowingPlot,
-        # IncomeBasedSpaceRenderer,
+        IncomeVariancePlot,
     ],
     model_params=model_params,
     name="Gentrification model",

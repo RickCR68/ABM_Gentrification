@@ -10,8 +10,10 @@ class NeighborhoodDefinition(ABC):
     """Determines which agents belong to a neighborhood."""
 
     @abstractmethod
-    def get_neighbors(self, cell: Cell) -> list:
-        """Return the agents living in the given neighborhood."""
+    def get_neighbors(self, cell: Cell, include_self=False) -> list:
+        """Return the agents living in the given neighborhood.
+        :param include_self:
+        """
         raise NotImplementedError
 
 class MooreNeighborhood(NeighborhoodDefinition):
@@ -23,8 +25,8 @@ class MooreNeighborhood(NeighborhoodDefinition):
 
         self.radius = radius
 
-    def get_neighbors(self, cell: Cell) -> list:
-        neighborhood = cell.get_neighborhood(radius=self.radius)
+    def get_neighbors(self, cell: Cell, include_self=False) -> list:
+        neighborhood = cell.get_neighborhood(radius=self.radius, include_center=include_self)
         return list(neighborhood.agents)
 
 # Possible other neighborhoods here depending on what we want?

@@ -89,8 +89,7 @@ class NeighborhoodStateManager:
 
         for cell in model.grid.all_cells:
             neighbors = (
-                self.neighborhood_definition
-                .get_neighbors(cell)
+                self.neighborhood_definition.get_neighbors(cell, include_self=True)
             )
 
             if not neighbors:
