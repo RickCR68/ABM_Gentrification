@@ -32,7 +32,7 @@ GSA_PROBLEM = {
     ]
 }
 
-SIM_STEPS = 50  # Updated to requested steps
+SIM_STEPS = 2000  # Updated to requested steps
 
 def run_single_simulation(args):
     """
@@ -92,7 +92,7 @@ if __name__ == "__main__":
     # Read from environment variable or default to part 1 (Acceptable values: 1, 2, 3, 4)
     CURRENT_PART = int(os.getenv("GSA_PART", 1))
     
-    N = 512 
+    N = 512
     param_values = sobol.sample(GSA_PROBLEM, N)
     total_tasks = len(param_values)
     print(f"Total global matrix contains {total_tasks} parameter combinations.")
@@ -103,13 +103,13 @@ if __name__ == "__main__":
     # Create all tasks matching their universal global matrix run_id indices
     all_tasks = [(param_values[i], i) for i in range(total_tasks)]
     
+    # Slice the task list into 4 exact quadrants
     chunk_size = total_tasks // 8
     start_idx = (CURRENT_PART - 1) * chunk_size
     end_idx = start_idx + chunk_size if CURRENT_PART < 8 else total_tasks
     
     active_tasks = all_tasks[start_idx:end_idx]
     print(f"Executing Part {CURRENT_PART}/{8}. Processing tasks index {start_idx} to {end_idx} ({len(active_tasks)} simulations)...")
-    
     # 3. Distributed Execution via Process Pool
     max_workers = int(os.getenv("SLURM_CPUS_PER_TASK", os.cpu_count()))
     print(f"Starting parallel processing using {max_workers} workers...")
