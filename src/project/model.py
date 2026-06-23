@@ -271,6 +271,8 @@ class GentrificationModel(Model):
             self
         )
 
+        self.neighborhood_state.initialize_rent(self)
+
         self._update_agent_states()
 
         self.datacollector.collect(self)

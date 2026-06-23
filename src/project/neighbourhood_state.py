@@ -194,3 +194,7 @@ class NeighborhoodStateManager:
         return float(
             np.mean(model.grid.rent.data)
         )
+
+    def initialize_rent(self, model: GentrificationModel) -> None:
+        """Initialize the rent layer to the configured initial value."""
+        model.grid.rent.data[:] = model.affordability_share*model.grid.mean_neighbor_income.data
