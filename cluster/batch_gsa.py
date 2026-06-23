@@ -29,8 +29,7 @@ GSA_PROBLEM = {
     ]
 }
 
-SIM_STEPS = 500  # note: 200 to stabilize 
-
+SIM_STEPS = 3  # note: 200 to stabilize 
 def run_single_simulation(args):
     """
     Worker function executed on an individual CPU core.
@@ -48,9 +47,9 @@ def run_single_simulation(args):
     model = GentrificationModel(
         width=11,
         height=11,
-        density=0.9,                # Matched with app.py default setup
+        density=0.8,                # Matched with app.py default setup
         neighborhood_radius=2,      # Fixed at 2 per your agreements
-        affordability_share=0.8,     # Set at 80% (Run 1 of Low/Med/High tests)
+        affordability_share=0.9,     # Set at 90% (Run 1 of Low/Med/High tests)
         
         # Actively Sampled GSA Parameters:
         moving_cost=moving_cost,
@@ -68,7 +67,7 @@ def run_single_simulation(args):
         
     # Safely extract tracked metrics from the last step collected by the DataCollector DataFrame
     df_model_vars = model.datacollector.get_model_vars_dataframe()
-    df_agent_vars = model.datacollector.get_agent_vars_dataframe()  # Track agent-level metrics
+    df_agent_vars = model.datacollector.get_agent_vars_dataframe()
     df_model_vars.to_csv(f"gsa_detailed_runs/model_run_{run_id}.csv", index=True)
     df_agent_vars.to_csv(f"gsa_detailed_runs/agent_run_{run_id}.csv", index=True)
     # Map both input parameters and output results into the returned dictionary
@@ -90,10 +89,10 @@ def run_single_simulation(args):
 if __name__ == "__main__":
     # 2. Generate Parameter Samples (N must be a power of 2)
     # Total samples = N * (2 * num_vars + 2)
-    N = 512
+    N = 2 # *** 512
     param_values = sobol.sample(GSA_PROBLEM, N)
     print(f"Generated {len(param_values)} parameter combinations for Sobol GSA.")
-    
+    os.makedirs("gsa_detailed_runs", exist_ok=True)
     # Package parameter values with identifiers for mapping
     tasks = [(param_values[i], i) for i in range(len(param_values))]
     
@@ -133,5 +132,3 @@ if __name__ == "__main__":
             'Total-Order (ST)': Si['ST']
         })
         print(df_si.to_string(index=False))
-
-    
