@@ -226,6 +226,7 @@ class SchellingAgent(CellAgent):
             * spillover
         )
 
+        #TODO: make volatility a function of local income variance
         volatility = self.model.income_volatility
 
         shock = float(

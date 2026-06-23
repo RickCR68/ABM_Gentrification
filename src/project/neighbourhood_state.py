@@ -57,11 +57,11 @@ class NeighborhoodStateManager:
             empty_neighborhood_income
         )
 
-    def calculate_mean_income(
+    def calculate_mean_income_and_variance(
         self,
         model: GentrificationModel,
-    ) -> NDArray[np.float64]:
-        """Calculate local mean income around every grid cell.
+    ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+        """Calculate local mean income and variance around every grid cell.
 
         For each cell j, this calculates
 
@@ -69,12 +69,21 @@ class NeighborhoodStateManager:
             =
             mean income of households in j's neighbourhood.
 
+            var_y_j
+            = variance of household incomes in j's neighbourhood.
+
         If no neighbouring households are present, the configured
         `empty_neighborhood_income` value is used.
         """
         mean_incomes = np.full(
             model.grid.dimensions,
             fill_value=self.empty_neighborhood_income,
+            dtype=float,
+        )
+
+        var_incomes = np.full(
+            model.grid.dimensions,
+            fill_value=0.0,
             dtype=float,
         )
 
@@ -102,7 +111,11 @@ class NeighborhoodStateManager:
                 np.mean(incomes)
             )
 
-        return mean_incomes
+            var_incomes[cell.coordinate] = float(
+                np.var(incomes, ddof=0)
+            )
+
+        return mean_incomes, var_incomes
 
     def initialize_income_layer(
         self,
@@ -122,13 +135,14 @@ class NeighborhoodStateManager:
         - after household incomes change;
         - after households relocate.
         """
-        updated_mean_income = self.calculate_mean_income(
+        updated_mean_income, updated_mean_variance = self.calculate_mean_income_and_variance(
             model
         )
-
+        #TODO: add variance layer to model.grid and update it here
         model.grid.mean_neighbor_income.data[:] = (
             updated_mean_income
         )
+        model.grid.neighbor_income_variance.data[:] = updated_mean_variance
 
     def update_rents(
         self,
@@ -156,7 +170,7 @@ class NeighborhoodStateManager:
 
         delta = self.rent_adjustment_rate
 
-        #TODO: make rent cap variable
+
         rents[:] = rents + delta * (
             affordability_share*mean_incomes - rents
         )
@@ -180,3 +194,7 @@ class NeighborhoodStateManager:
         return float(
             np.mean(model.grid.rent.data)
         )
+
+    def initialize_rent(self, model: GentrificationModel) -> None:
+        """Initialize the rent layer to the configured initial value."""
+        model.grid.rent.data[:] = model.affordability_share*model.grid.mean_neighbor_income.data
