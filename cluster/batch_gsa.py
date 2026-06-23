@@ -23,7 +23,7 @@ GSA_PROBLEM = {
     ]
 }
 
-SIM_STEPS = 50  # Number of steps to run each model instance
+SIM_STEPS = 50  # note: 200 to stabilize 
 
 def run_single_simulation(args):
     """
@@ -32,12 +32,13 @@ def run_single_simulation(args):
     the input parameter values and the final macroscopic system metrics.
     """
     param_set, run_id = args
-    theta, risk_aversion, discount_factor, rationality, vision_radius = param_set
+    theta, risk_aversion, discount_factor, rationality, vision_radius = param_set # **vision income not vision radius
     
     # Initialize your model with the sampled parameters matching model validation
     model = GentrificationModel(
-        width=11,
-        height=11,
+        
+        width=20,
+        height=20,
         density=0.95,
         income_similarity_min=theta,
         income_similarity_max=theta,
@@ -76,7 +77,7 @@ def run_single_simulation(args):
 if __name__ == "__main__":
     # 2. Generate Parameter Samples (N must be a power of 2)
     # Total samples = N * (2 * num_vars + 2)
-    N = 128 
+    N = 512
     param_values = sobol.sample(GSA_PROBLEM, N)
     print(f"Generated {len(param_values)} parameter combinations for Sobol GSA.")
     
