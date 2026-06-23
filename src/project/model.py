@@ -82,6 +82,7 @@ class GentrificationModel(Model):
         qre_damping: float = 0.5,
 
         keep_game_history: bool = True,
+        keep_agents: bool = True,
 
         rng=None,
     ) -> None:
@@ -128,6 +129,7 @@ class GentrificationModel(Model):
             qre_damping=qre_damping,
         )
         #????
+        self.keep_agents = keep_agents
         self.affordability_share = affordability_share
 
         self.width = width
@@ -305,7 +307,6 @@ class GentrificationModel(Model):
                 "pct_satisfied": (
                     self.percentage_satisfied
                 ),
-
                 "move_attempts": "move_attempts",
                 "successful_moves": "successful_moves",
                 "failed_searches": "failed_searches",
@@ -316,7 +317,7 @@ class GentrificationModel(Model):
                 "movement_success_rate": (
                     self.movement_success_rate
                 ),
-
+                # "cells_rent": [cell.rent for cell in self.grid.all_cells],
                 "city_mean_income": (
                     self.city_mean_income
                 ),
@@ -406,6 +407,8 @@ class GentrificationModel(Model):
                 "income_similarity_preference": (
                     "income_similarity_preference"
                 ),
+                "coordinates": lambda a: a.cell.coordinate,
+                "rent": lambda a: a.cell.rent,
                 "discount_factor": (
                     "discount_factor"
                 ),
@@ -437,7 +440,7 @@ class GentrificationModel(Model):
                 "last_qre_ne_move_gap": (
                     "last_qre_ne_move_gap"
                 ),
-            },
+            } if self.keep_agents else None,
         )
 
     @staticmethod
