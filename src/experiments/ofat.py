@@ -3,9 +3,9 @@ from time import time
 from pathlib import Path
 from src.project.model import GentrificationModel
 
-RUNS_PER_SAMPLE = 4 # 10
+RUNS_PER_SAMPLE = 2 # 10
 NUMBER_OF_CONTINUOUS_PARAMETER_VALUES = 8 # AKA N IN SOBOL
-STEPS_PER_RUN = 100 # 200 at first then 2000
+STEPS_PER_RUN = 10 # 200 at first then 2000
 
 # Fixed parameters for the model
 GRID_SIZE = 11
@@ -30,13 +30,13 @@ def continuous_samples(parameter_min, parameter_max, non_negative: bool = True):
 parameters = {
     # Agent-Specific Parameters
     #
-    'neighborhood_radius': [1, 2, 3, 4, 5],
-    'affordability_share': continuous_samples(0.0, 1.0, non_negative=True),
-    'income_similarity_min': continuous_samples(0.0, 2.0, non_negative=True),
-    'initial_income_max': continuous_samples(0.0, 1.0, non_negative=True),
-    'discount_factor_max': continuous_samples(0.0, 2.0, non_negative=True),
-    'risk_aversion_max': continuous_samples(-1.0, 1.0),
     'rationality_max': continuous_samples(0.0, 1.0),
+    'affordability_share': continuous_samples(0.0, 1.0, non_negative=True),
+    'risk_aversion_max': continuous_samples(-1.0, 0.99),
+    'discount_factor_max': continuous_samples(0.0, 2.0, non_negative=True),
+    'initial_income_max': continuous_samples(0.0, 1.0, non_negative=True),
+    'income_similarity_min': continuous_samples(0.0, 2.0, non_negative=True),
+    'neighborhood_radius': [1, 2, 3, 4, 5],
 
     # Model-Wide Parameters - SOBOL - no need to test
     #
@@ -69,7 +69,9 @@ for param_name, param_values in parameters.items():
             'steps_until_satisfied': STEPS_UNTIL_SATISFIED,
             'income_growth_scaling': INCOME_GROWTH_SCALING,
             'income_volatility': INCOME_VOLATILITY,
-            'keep_game_history': KEEP_GAME_HISTORY
+            'keep_game_history': KEEP_GAME_HISTORY,
+            'initial_income_min': 0.1,
+            'rationality_min': 0.0,
         }
 
         for i in range(RUNS_PER_SAMPLE):

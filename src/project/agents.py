@@ -146,10 +146,10 @@ class SchellingAgent(CellAgent):
                 "income_similarity_preference must be non-negative."
             )
 
-        if not 0.0 <= discount_factor <= 1.0:
-            raise ValueError(
-                "discount_factor must lie between 0 and 1."
-            )
+        # if not 0.0 <= discount_factor <= 1.0:
+        #     raise ValueError(
+        #         "discount_factor must lie between 0 and 1."
+        #     )
 
         # if not 0.0 <= risk_aversion < 5.0:
         #     raise ValueError(

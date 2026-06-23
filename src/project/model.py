@@ -514,16 +514,6 @@ class GentrificationModel(Model):
                     f"{prefix}_min cannot exceed {prefix}_max."
                 )
 
-        if not (
-            0.0
-            <= parameters["discount_factor_min"]
-            <= parameters["discount_factor_max"]
-            <= 1.0
-        ):
-            raise ValueError(
-                "Discount factors must lie in [0, 1]."
-            )
-
         # if not (
         #     # 0.0
         #     # <= parameters["risk_aversion_min"]
