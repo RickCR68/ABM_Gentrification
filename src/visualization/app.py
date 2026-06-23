@@ -603,6 +603,76 @@ NEFollowingPlot = make_plot_component(
     }
 )
 
+# Segregation and Gentrification Metrics Plots
+SpatialSegregationPlot = make_plot_component(
+    {
+        "moran_i": "tab:blue",
+        "segregation_index": "tab:red",
+    }
+)
+
+SpatialDiversityPlot = make_plot_component(
+    {
+        "spatial_entropy": "tab:green",
+        "neighborhood_heterogeneity": "tab:orange",
+    }
+)
+
+HomelessnessPlot = make_plot_component(
+    {
+        "homeless_fraction": "tab:red",
+    }
+)
+
+InequalityPlot = make_plot_component(
+    {
+        "gini_coefficient": "tab:blue",
+        "theil_index": "tab:purple",
+    }
+)
+
+IncomeMobilityPlot = make_plot_component(
+    {
+        "income_mobility_indicator": "tab:green",
+    }
+)
+
+GentrificationPlot = make_plot_component(
+    {
+        "gentrification_indicator": "tab:orange",
+    }
+)
+
+@solara.component
+def SegregationMetricsPanel(model):
+    """Display current segregation and gentrification metrics."""
+    update_counter.get()  # Required for reactivity
+
+    moran_i = model.get_moran_i() if hasattr(model, 'get_moran_i') else 0.0
+    seg_index = model.get_segregation_index() if hasattr(model, 'get_segregation_index') else 0.0
+    entropy = model.get_spatial_entropy() if hasattr(model, 'get_spatial_entropy') else 0.0
+    hetero = model.get_neighborhood_heterogeneity() if hasattr(model, 'get_neighborhood_heterogeneity') else 0.0
+    homeless_frac = model.get_homeless_fraction() if hasattr(model, 'get_homeless_fraction') else 0.0
+    theil = model.get_theil_index() if hasattr(model, 'get_theil_index') else 0.0
+
+    return solara.Markdown(
+        f"""
+### Segregation & Gentrification Metrics
+
+**Spatial Clustering**
+- Moran's I: {moran_i:.4f} (Higher → More clustered/segregated)
+- Segregation Index: {seg_index:.4f} (Higher → More segregated)
+
+**Spatial Diversity**
+- Spatial Entropy: {entropy:.4f} (Higher → More heterogeneous/integrated)
+- Neighborhood Heterogeneity: {hetero:.4f} (Higher → More mixed neighborhoods)
+
+**Economic Distress**
+- Homeless Fraction: {homeless_frac:.4f} ({homeless_frac*100:.2f}% of agents)
+- Theil Index: {theil:.6f} (Income inequality measure)
+"""
+    )
+
 page = SolaraViz(
     model,
     renderer,
@@ -611,12 +681,19 @@ page = SolaraViz(
         IncomeHistogram,
         RentVsIncomeScatter,
         get_model_statistics,
+        SegregationMetricsPanel,
         SatisfactionPlot,
         MovementPlot,
         MovementSuccessPlot,
         IncomeRentPlot,
         UtilityPlot,
         GiniPlot,
+        InequalityPlot,
+        SpatialSegregationPlot,
+        SpatialDiversityPlot,
+        HomelessnessPlot,
+        IncomeMobilityPlot,
+        GentrificationPlot,
         EquilibriumProbabilityPlot,
         EquilibriumDeviationPlot,
         NEFollowingPlot,
