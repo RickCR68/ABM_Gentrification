@@ -57,9 +57,10 @@ parameters = {
 
 for param_name, param_values in parameters.items():
     print(f"Parameter: {param_name}, Values: {param_values}")
-    output_dir = Path(f"results/{param_name}")
     for param_value in param_values:
         print(f"  Running with {param_name} = {param_value}")
+
+
         params_dict = {
             f'{param_name}': param_value,
             'width': GRID_SIZE,
@@ -70,18 +71,21 @@ for param_name, param_values in parameters.items():
             'income_volatility': INCOME_VOLATILITY,
             'keep_game_history': KEEP_GAME_HISTORY
         }
+
         for i in range(RUNS_PER_SAMPLE):
             begining_time = time()
+            output_dir = Path(f"results/{param_name}/{param_value}/run_{i + 1}")
+            output_dir.mkdir(parents=True, exist_ok=True)
+
+            model_output_file = output_dir / f"model_run_{i + 1}.csv"
+            agent_output_file = output_dir / f"agents_run_{i + 1}.csv"
+
             gm = GentrificationModel(
                 **params_dict
             )
 
             for _ in range(STEPS_PER_RUN):
                 gm.step()
-            gm.datacollector.get_model_vars_dataframe().to_csv(
-                f"results/{param_name}/{param_value}_model_run_{i}.csv"
-            )
-            gm.datacollector.get_agent_vars_dataframe().to_csv(
-                f"results/{param_name}/{param_value}_agents_run_{i}.csv"
-            )
+            gm.datacollector.get_model_vars_dataframe().to_csv(model_output_file)
+            gm.datacollector.get_agent_vars_dataframe().to_csv(agent_output_file)
             print(f"    Run {i+1}/{RUNS_PER_SAMPLE} completed in {time() - begining_time:.2f} seconds.")
