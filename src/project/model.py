@@ -85,8 +85,9 @@ class GentrificationModel(Model):
         keep_agents: bool = True,
 
         rng=None,
+        experiment_type: str = "default"
     ) -> None:
-        super().__init__(rng=rng)
+        super().__init__()
 
         self._validate_parameters(
             width=width,
@@ -269,7 +270,12 @@ class GentrificationModel(Model):
             self._create_datacollector()
         )
 
-        self._create_agents()
+        if experiment_type == "poor_shock":
+            self._init_poor_shock_experiment()
+        elif experiment_type == "half_and_half":
+            self._init_half_and_half_experiment(density)
+        else:
+            self._create_agents()
 
         self.neighborhood_state.initialize_income_layer(
             self
@@ -280,6 +286,68 @@ class GentrificationModel(Model):
         self._update_agent_states()
 
         self.datacollector.collect(self)
+
+    def _init_poor_shock_experiment(self):
+        """Places wealthy agents everywhere, except for one poor agent in the dead center."""
+        for cell in self.grid:
+            if self.random.random() < 0.85: # 85% density
+                SchellingAgent(
+                    model=self, cell=cell, 
+                    income=0.95, 
+                    income_similarity_preference=0.4, 
+                    risk_aversion=0.2,  # Wealthy agents are less risk-averse
+                    discount_factor=0.8, 
+                    rationality=2.0
+                )
+        
+        # Force place a single low-income 'shock' agent in the middle
+        center_x, center_y = self.grid.width // 2, self.grid.height // 2
+        
+        try:
+            center_cell = self.grid[center_x, center_y]
+        except TypeError:
+            center_cell = self.grid[center_y][center_x]
+        
+        if not center_cell.is_empty:
+            agents_to_remove = list(center_cell.agents)
+            for agent_to_remove in agents_to_remove:
+                center_cell.remove_agent(agent_to_remove)
+                if agent_to_remove in self.agents:
+                    self.agents.remove(agent_to_remove)
+            
+        SchellingAgent(
+            model=self, cell=center_cell, 
+            income=0.10, 
+            income_similarity_preference=0.4, 
+            risk_aversion=0.95,  # Avoid EXACTLY 1.0 to prevent ZeroDivisionError
+            discount_factor=0.1, 
+            rationality=1.0
+        )
+
+    def _init_half_and_half_experiment(self, density):
+        """Splits the population into 50% high-income speculators and 50% vulnerable households."""
+        cells = [cell for cell in self.grid]
+        self.random.shuffle(cells)
+        
+        num_agents = int(len(cells) * density)
+        half = num_agents // 2
+        
+        for i in range(num_agents):
+            cell = cells[i]
+            if i < half:
+                # Group A: High-Income Speculators
+                SchellingAgent(
+                    model=self, cell=cell, income=0.90, 
+                    income_similarity_preference=0.5,  # Changed from theta
+                    risk_aversion=0.2, discount_factor=0.95, rationality=5.0
+                )
+            else:
+                # Group B: Low-Income Vulnerable
+                SchellingAgent(
+                    model=self, cell=cell, income=0.25, 
+                    income_similarity_preference=0.5,  # Changed from theta
+                    risk_aversion=2.5, discount_factor=0.30, rationality=1.0
+                )
 
     def _create_property_layers(self) -> None:
         self.grid.create_property_layer(
