@@ -176,8 +176,8 @@ def get_model_statistics(model):
 def post_process(ax):
     fig = ax.figure
 
-    fig.set_size_inches(5.2, 3.8)
-    fig.tight_layout()
+    fig.set_size_inches(5.1, 3.5)
+    # fig.tight_layout()
     # ax.set_box_aspect(0.6)  # consistent visual ratio
 
 
@@ -499,6 +499,7 @@ renderer = SpaceRenderer(
 
 renderer.setup_agents(agent_portrayal)
 renderer.setup_propertylayer(property_layer_portrayal)
+renderer.post_process = post_process
 renderer.render()
 
 @solara.component
