@@ -214,38 +214,24 @@ def spatial_entropy(model: GentrificationModel) -> float:
 
     quartiles = np.quantile(incomes, [0.25, 0.5, 0.75])
 
-    # Classify agents into income groups (4 groups: 0, 1, 2, 3)
-    income_groups = np.zeros(len(incomes), dtype=int)
-    for i, income in enumerate(incomes):
-        if income <= quartiles[0]:
-            income_groups[i] = 0
-        elif income <= quartiles[1]:
-            income_groups[i] = 1
-        elif income <= quartiles[2]:
-            income_groups[i] = 2
-        else:
-            income_groups[i] = 3
+    # Classify agents into income groups (4 groups: 0, 1, 2, 3).
+    # `np.digitize` keeps this vectorized and preserves the same quartile split.
+    income_groups = np.digitize(incomes, quartiles, right=True)
 
     # Divide grid into regions (e.g., 4x4 regions for computational efficiency)
     num_regions_per_side = max(2, model.width // 5)
     region_width = model.width / num_regions_per_side
     region_height = model.height / num_regions_per_side
 
-    # Count income group distributions per region
+    # Count income group distributions per region.
     region_distributions = {}
-    agent_positions = {}
 
-    for agent in model.agents:
+    for agent, group in zip(model.agents, income_groups):
         x, y = agent.cell.coordinate
         region_x = int(x / region_width)
         region_y = int(y / region_height)
         region_id = (min(region_x, num_regions_per_side - 1),
                      min(region_y, num_regions_per_side - 1))
-
-        income_idx = np.where(
-            np.array([ag.income for ag in model.agents]) == agent.income
-        )[0][0]
-        group = income_groups[income_idx]
 
         if region_id not in region_distributions:
             region_distributions[region_id] = [0, 0, 0, 0]

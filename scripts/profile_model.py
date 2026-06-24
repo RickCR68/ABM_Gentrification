@@ -63,6 +63,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Disable per-agent history storage while profiling.",
     )
+    parser.add_argument(
+        "--no-progress",
+        action="store_true",
+        help="Disable the terminal progress bar.",
+    )
     return parser
 
 
@@ -86,11 +91,40 @@ def run_simulation(args: argparse.Namespace) -> object:
     start = time.perf_counter()
     profiler.enable()
 
-    for _ in range(args.steps):
+    progress_enabled = not args.no_progress
+    progress_total = max(args.steps, 1)
+    progress_width = 28
+    progress_every = max(1, args.steps // 100)
+
+    def render_progress(completed_steps: int) -> None:
+        if not progress_enabled:
+            return
+
+        fraction = completed_steps / progress_total
+        filled = min(progress_width, int(progress_width * fraction))
+        bar = "#" * filled + "-" * (progress_width - filled)
+        sys.stderr.write(
+            f"\rProfiling [{bar}] {completed_steps}/{args.steps}"
+        )
+        sys.stderr.flush()
+
+    render_progress(0)
+
+    for step_index in range(args.steps):
         model.step()
+        completed_steps = step_index + 1
+        if progress_enabled and (
+            completed_steps == args.steps
+            or completed_steps % progress_every == 0
+        ):
+            render_progress(completed_steps)
 
     profiler.disable()
     elapsed = time.perf_counter() - start
+
+    if progress_enabled:
+        sys.stderr.write("\n")
+        sys.stderr.flush()
 
     return model, profiler, elapsed
 
