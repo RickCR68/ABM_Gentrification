@@ -127,51 +127,58 @@ def get_model_statistics(model):
         f"""
 ### Current model state
 
-**Population:** {len(model.agents)}  
-**Residentially stable households:** {model.satisfied_count}  
-**Percentage stable:** {model.percentage_satisfied():.1f}%  
-**Mean fixed vision radius:** {model.mean_vision():.2f}  
+**Population:** {len(model.agents)}
+**Residentially stable households:** {model.satisfied_count}
+**Percentage stable:** {model.percentage_satisfied():.1f}%
+**Mean fixed vision radius:** {model.mean_vision():.2f}
 
 ### Relocation
 
- 
-**Successful moves:** {model.successful_moves}  
-**Failed searches:** {model.failed_searches}  
-**Voluntary stays after game:** {model.voluntary_stays}  
-**Destination conflicts:** {model.destination_conflicts}  
-**Realized movement rate:** {model.movement_success_rate():.1%}  
+
+**Successful moves:** {model.successful_moves}
+**Failed searches:** {model.failed_searches}
+**Voluntary stays after game:** {model.voluntary_stays}
+**Destination conflicts:** {model.destination_conflicts}
+**Realized movement rate:** {model.movement_success_rate():.1%}
 
 ### Game outcomes
 
-**Move–accept:** {model.move_accept_outcomes}  
-**Move–reject:** {model.move_reject_outcomes}  
-**Stay–accept:** {model.stay_accept_outcomes}  
-**Stay–reject:** {model.stay_reject_outcomes}  
-**QRE non-convergence count:** {model.qre_nonconvergence_count}  
+**Move–accept:** {model.move_accept_outcomes}
+**Move–reject:** {model.move_reject_outcomes}
+**Stay–accept:** {model.stay_accept_outcomes}
+**Stay–reject:** {model.stay_reject_outcomes}
+**QRE non-convergence count:** {model.qre_nonconvergence_count}
 
 ### QRE and Nash equilibrium
 
-**Mean QRE move probability:** {model.mean_qre_move_probability():.3f}  
-**Mean QRE accept probability:** {model.mean_qre_accept_probability():.3f}  
-**Mean closest-NE move probability:** {model.mean_ne_move_probability():.3f}  
-**Mean absolute QRE–NE gap:** {model.mean_qre_ne_move_gap():.3f}  
-**NE-following rate (gap ≤ 0.05):** {model.ne_following_rate():.1%}  
-**Mean change in neighbourhood utility:** {model.mean_delta_neighborhood_utility():.3f}  
+**Mean QRE move probability:** {model.mean_qre_move_probability():.3f}
+**Mean QRE accept probability:** {model.mean_qre_accept_probability():.3f}
+**Mean closest-NE move probability:** {model.mean_ne_move_probability():.3f}
+**Mean absolute QRE–NE gap:** {model.mean_qre_ne_move_gap():.3f}
+**NE-following rate (gap ≤ 0.05):** {model.ne_following_rate():.1%}
+**Mean change in neighbourhood utility:** {model.mean_delta_neighborhood_utility():.3f}
 
 ### Economic state
 
-**Mean household income:** {model.city_mean_income():.3f}  
-**Mean nonempty neighbourhood income:** {model.mean_neighbor_income():.3f}  
-**Mean rent:** {model.mean_rent():.3f}  
-**Rent/income adjustment-rate ratio:** {ratio_text}  
+**Mean household income:** {model.city_mean_income():.3f}
+**Mean nonempty neighbourhood income:** {model.mean_neighbor_income():.3f}
+**Mean rent:** {model.mean_rent():.3f}
+**Rent/income adjustment-rate ratio:** {ratio_text}
 
 ### Utility and value
 
-**Mean raw household utility:** {model.mean_utility():.3f}  
+**Mean raw household utility:** {model.mean_utility():.3f}
 **Mean signed-CRRA household value:** {model.mean_value():.3f}
 """
     )
 
+
+def post_process(ax):
+    fig = ax.figure
+
+    fig.set_size_inches(5.2, 3.8)
+    fig.tight_layout()
+    # ax.set_box_aspect(0.6)  # consistent visual ratio
 
 
 model_params = {
