@@ -8,6 +8,7 @@ wheels/
 
 # Virtual environments
 .venv
+results/
 
 # Mac issues
 .DS_Store
