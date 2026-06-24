@@ -56,6 +56,23 @@ class NeighborhoodStateManager:
         self.empty_neighborhood_income = (
             empty_neighborhood_income
         )
+        self._moore_offsets = self._build_moore_offsets()
+
+    def _build_moore_offsets(self) -> tuple[tuple[int, int], ...] | None:
+        """Precompute Moore-neighborhood offsets when supported."""
+        radius = getattr(self.neighborhood_definition, "radius", None)
+
+        if radius is None:
+            return None
+
+        offsets: list[tuple[int, int]] = []
+        for dx in range(-radius, radius + 1):
+            for dy in range(-radius, radius + 1):
+                if dx == 0 and dy == 0:
+                    continue
+                offsets.append((dx, dy))
+
+        return tuple(offsets)
 
     def calculate_mean_income_and_variance(
         self,
@@ -75,6 +92,69 @@ class NeighborhoodStateManager:
         If no neighbouring households are present, the configured
         `empty_neighborhood_income` value is used.
         """
+        if self._moore_offsets is None:
+            return self._calculate_mean_income_and_variance_fallback(
+                model
+            )
+
+        income_grid = np.zeros(
+            model.grid.dimensions,
+            dtype=float,
+        )
+
+        for agent in model.agents:
+            income_grid[agent.cell.coordinate] = agent.income
+
+        occupied_grid = (income_grid > 0.0).astype(float)
+
+        neighbor_income_sum = np.zeros_like(income_grid)
+        neighbor_income_sq_sum = np.zeros_like(income_grid)
+        neighbor_count = np.zeros_like(income_grid)
+
+        for dx, dy in self._moore_offsets:
+            shifted_income = np.roll(
+                np.roll(income_grid, dx, axis=0),
+                dy,
+                axis=1,
+            )
+            shifted_occupied = np.roll(
+                np.roll(occupied_grid, dx, axis=0),
+                dy,
+                axis=1,
+            )
+
+            neighbor_income_sum += shifted_income
+            neighbor_income_sq_sum += shifted_income * shifted_income
+            neighbor_count += shifted_occupied
+
+        mean_incomes = np.full(
+            model.grid.dimensions,
+            fill_value=self.empty_neighborhood_income,
+            dtype=float,
+        )
+        var_incomes = np.zeros(
+            model.grid.dimensions,
+            dtype=float,
+        )
+
+        valid = neighbor_count > 0.0
+        if np.any(valid):
+            means = neighbor_income_sum[valid] / neighbor_count[valid]
+            variances = (
+                neighbor_income_sq_sum[valid] / neighbor_count[valid]
+                - means * means
+            )
+
+            mean_incomes[valid] = means
+            var_incomes[valid] = np.maximum(variances, 0.0)
+
+        return mean_incomes, var_incomes
+
+    def _calculate_mean_income_and_variance_fallback(
+        self,
+        model: GentrificationModel,
+    ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+        """Fallback implementation for unsupported neighborhood types."""
         mean_incomes = np.full(
             model.grid.dimensions,
             fill_value=self.empty_neighborhood_income,
@@ -88,32 +168,21 @@ class NeighborhoodStateManager:
         )
 
         for cell in model.grid.all_cells:
-            neighbors = (
-                self.neighborhood_definition
-                .get_neighbors(cell)
-            )
+            neighbors = self.neighborhood_definition.get_neighbors(cell)
 
             if not neighbors:
                 continue
 
             incomes = np.fromiter(
-                (
-                    neighbor.income
-                    for neighbor in neighbors
-                ),
+                (neighbor.income for neighbor in neighbors),
                 dtype=float,
             )
 
             if incomes.size == 0:
                 continue
 
-            mean_incomes[cell.coordinate] = float(
-                np.mean(incomes)
-            )
-
-            var_incomes[cell.coordinate] = float(
-                np.var(incomes, ddof=0)
-            )
+            mean_incomes[cell.coordinate] = float(np.mean(incomes))
+            var_incomes[cell.coordinate] = float(np.var(incomes, ddof=0))
 
         return mean_incomes, var_incomes
 
