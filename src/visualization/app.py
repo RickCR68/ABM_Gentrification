@@ -162,6 +162,7 @@ def CustomVisualization(model):
     renderer = SpaceRenderer(model, backend="matplotlib")
     renderer.setup_agents(agent_portrayal)
     renderer.setup_propertylayer(property_layer_portrayal)
+    renderer.post_process = post_process
     renderer.render()
 
 
@@ -252,7 +253,7 @@ def get_model_statistics(model):
 def post_process(ax):
     fig = ax.figure
 
-    fig.set_size_inches(5.1, 3.5)
+    fig.set_size_inches(5.1, 3.0)
     # fig.tight_layout()
     # ax.set_box_aspect(0.6)  # consistent visual ratio
 
