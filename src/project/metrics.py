@@ -306,38 +306,24 @@ def neighborhood_heterogeneity(model: GentrificationModel) -> float:
     heterogeneities = []
 
     for agent in model.agents:
-        # Get neighborhood (using model's defined neighborhood_definition)
-        x, y = agent.cell.coordinate
-        neighbor_incomes = []
+        neighbors = model.neighborhood_definition.get_neighbors(
+            agent.cell
+        )
 
-        # Moore neighborhood
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
-                if dx == 0 and dy == 0:
-                    continue
+        if not neighbors:
+            continue
 
-                nx = (x + dx) % model.width
-                ny = (y + dy) % model.height
+        neighbor_incomes = [
+            neighbor.income
+            for neighbor in neighbors
+        ]
+        neighbor_incomes.append(agent.income)
 
-                # Get cell and its resident using proper Mesa API
-                try:
-                    # Use empties_iter or all_cells to find agents at coordinate
-                    neighbor_cell = model.grid.empty_cells[0] if False else None  # Placeholder
+        mean_income = float(np.mean(neighbor_incomes))
 
-                    # Direct approach: iterate all agents to find neighbors
-                    for other_agent in model.agents:
-                        if other_agent.cell.coordinate == (nx, ny):
-                            neighbor_incomes.append(other_agent.income)
-                except (IndexError, KeyError):
-                    pass
-
-        if len(neighbor_incomes) > 1:
-            neighbor_incomes.append(agent.income)  # Include self
-            mean_income = np.mean(neighbor_incomes)
-
-            if mean_income > 0:
-                cv = np.std(neighbor_incomes) / mean_income
-                heterogeneities.append(cv)
+        if mean_income > 0.0:
+            cv = float(np.std(neighbor_incomes)) / mean_income
+            heterogeneities.append(cv)
 
     if not heterogeneities:
         return 0.0

@@ -1,0 +1,48 @@
+         28097187 function calls (28096887 primitive calls) in 7.324 seconds
+
+   Ordered by: cumulative time
+   List reduced from 246 to 40 due to restriction <40>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+       25    0.000    0.000    7.360    0.294 model.py:202(_wrapped_step)
+       25    0.000    0.000    7.360    0.294 model.py:206(_advance_time)
+       25    0.000    0.000    7.360    0.294 events.py:125(execute)
+       25    0.000    0.000    7.360    0.294 events.py:278(_execute_and_reschedule)
+       25    0.000    0.000    7.359    0.294 model.py:236(_do_step)
+       25    0.000    0.000    7.359    0.294 model.py:684(step)
+       25    0.004    0.000    5.211    0.208 datacollection.py:361(collect)
+       25    0.000    0.000    4.838    0.194 model.py:998(get_neighborhood_heterogeneity)
+       25    3.053    0.122    4.838    0.194 metrics.py:283(neighborhood_heterogeneity)
+ 20825350    1.560    0.000    1.560    0.000 cell_agent.py:35(cell)
+       50    0.009    0.000    1.521    0.030 agentset.py:761(shuffle_do)
+     8050    0.007    0.000    1.476    0.000 agents.py:247(prepare_move_decision)
+     8050    0.005    0.000    1.249    0.000 destination_choice.py:68(choose_destination)
+     8050    0.109    0.000    1.233    0.000 destination_choice.py:94(find_satisfactory_destinations)
+   138777    0.356    0.000    0.792    0.000 utility.py:223(evaluate_for_search)
+       50    0.000    0.000    0.457    0.009 neighbourhood_state.py:127(refresh_current_income)
+       50    0.052    0.001    0.457    0.009 neighbourhood_state.py:60(calculate_mean_income_and_variance)
+    28080    0.183    0.000    0.289    0.000 _methods.py:148(_var)
+     8050    0.095    0.000    0.287    0.000 destination_choice.py:195(_get_candidate_cells)
+      845    0.006    0.000    0.220    0.000 game.py:579(play)
+    19989    0.018    0.000    0.212    0.000 fromnumeric.py:4075(var)
+    30195    0.034    0.000    0.181    0.000 fromnumeric.py:3737(mean)
+   728272    0.120    0.000    0.171    0.000 cell.py:161(is_empty)
+      100    0.014    0.000    0.160    0.002 agentset.py:745(do)
+     8050    0.074    0.000    0.157    0.000 datacollection.py:311(get_reports)
+    30195    0.059    0.000    0.147    0.000 _methods.py:115(_mean)
+       25    0.000    0.000    0.146    0.006 model.py:994(get_spatial_entropy)
+       25    0.079    0.003    0.146    0.006 metrics.py:183(spatial_entropy)
+       50    0.000    0.000    0.145    0.003 model.py:636(_update_agent_states)
+   311444    0.112    0.000    0.135    0.000 utility.py:278(_layer_value)
+    16100    0.008    0.000    0.135    0.000 agents.py:175(assign_state)
+    16945    0.006    0.000    0.133    0.000 agents.py:163(evaluate_location)
+      845    0.030    0.000    0.133    0.000 game.py:401(solve)
+    16945    0.053    0.000    0.127    0.000 utility.py:132(evaluate)
+     8091    0.011    0.000    0.119    0.000 fromnumeric.py:3871(std)
+     8091    0.011    0.000    0.108    0.000 _methods.py:217(_std)
+   162482    0.078    0.000    0.107    0.000 utility.py:339(apply_signed_crra)
+    88320    0.074    0.000    0.074    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+    58275    0.060    0.000    0.068    0.000 _methods.py:73(_count_reduce_items)
+   138777    0.066    0.000    0.066    0.000 <string>:2(__init__)
+
+

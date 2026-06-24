@@ -42,6 +42,17 @@ python -m solara run src/visualization/app.py
 # Maybe windows is different, if so, update this readme plz
 ```
 
+### Profiling
+
+Use the built-in profiler to compare runs before and after changes:
+
+```shell
+python scripts/profile_model.py --steps 25 --warmup-steps 5 --profile-output profiles/base.prof --text-output profiles/base.txt
+```
+
+The script prints a short run summary and a sorted cProfile table, and it also
+writes a raw `.prof` file that you can compare across runs.
+
 ## Simulation Steps
 
 ### Initialize Grid

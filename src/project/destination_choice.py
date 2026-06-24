@@ -77,20 +77,28 @@ class RandomSatisficingChoice(DestinationChoicePolicy):
         if not satisfactory_candidates:
             return None
 
-        return agent.model.random.choice(
+        chosen_cell = agent.model.random.choice(
             satisfactory_candidates
+        )
+
+        evaluation, value_improvement = (
+            agent.evaluate_destination(chosen_cell)
+        )
+
+        return DestinationCandidate(
+            cell=chosen_cell,
+            evaluation=evaluation,
+            value_improvement=value_improvement,
         )
 
     def find_satisfactory_destinations(
         self,
         agent: SchellingAgent,
-    ) -> list[DestinationCandidate]:
+    ) -> list[Cell]:
         """Return all visible destinations satisfying the threshold."""
         candidate_cells = self._get_candidate_cells(agent)
 
-        satisfactory_candidates: list[
-            DestinationCandidate
-        ] = []
+        satisfactory_candidates: list[Cell] = []
 
         affordable_count = 0
 
@@ -103,9 +111,14 @@ class RandomSatisficingChoice(DestinationChoicePolicy):
             + required_improvement
         )
 
+        utility_policy = agent.model.utility_policy
+
         for cell in candidate_cells:
-            evaluation, value_improvement = (
-                agent.evaluate_destination(cell)
+            evaluation = (
+                utility_policy.evaluate_for_search(
+                    agent=agent,
+                    cell=cell,
+                )
             )
 
             if not evaluation.affordable:
@@ -116,6 +129,11 @@ class RandomSatisficingChoice(DestinationChoicePolicy):
             # Affordable locations should normally have finite utility.
             if not math.isfinite(evaluation.value):
                 continue
+
+            value_improvement = (
+                evaluation.value
+                - agent.current_value
+            )
 
             # If the current residence is unaffordable, its utility may
             # equal -inf. In that case, every affordable destination with
@@ -131,15 +149,7 @@ class RandomSatisficingChoice(DestinationChoicePolicy):
             if evaluation.value < aspiration_utility:
                 continue
 
-            satisfactory_candidates.append(
-                DestinationCandidate(
-                    cell=cell,
-                    evaluation=evaluation,
-                    value_improvement=(
-                        value_improvement
-                    ),
-                )
-            )
+            satisfactory_candidates.append(cell)
 
         agent.last_search_summary = (
             DestinationSearchSummary(

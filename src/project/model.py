@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 from collections import defaultdict
 from itertools import accumulate
+from threading import RLock
 
 import numpy as np
 
@@ -28,6 +29,26 @@ from .neighbourhood_state import (
 )
 from .neighborhoods import MooreNeighborhood
 from .utility import IncomeNeighborhoodUtility
+
+
+class ThreadSafeDataCollector(DataCollector):
+    """DataCollector variant that serializes collection and dataframe reads."""
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._lock = RLock()
+
+    def collect(self, model) -> None:
+        with self._lock:
+            super().collect(model)
+
+    def get_model_vars_dataframe(self):
+        with self._lock:
+            return super().get_model_vars_dataframe()
+
+    def get_agent_vars_dataframe(self):
+        with self._lock:
+            return super().get_agent_vars_dataframe()
 
 
 class GentrificationModel(Model):
@@ -303,7 +324,7 @@ class GentrificationModel(Model):
 
     def _create_datacollector(self) -> DataCollector:
         """Construct the Mesa data collector."""
-        return DataCollector(
+        return ThreadSafeDataCollector(
             model_reporters={
                 "satisfied_count": "satisfied_count",
                 "pct_satisfied": (

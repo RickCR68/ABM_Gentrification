@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import math 
+import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -34,6 +34,15 @@ class LocationEvaluation:
     growth_component: float
 
     # Final utility and transformed value
+    utility: float
+    value: float
+
+
+@dataclass(frozen=True)
+class LocationEvaluationSummary:
+    """Reduced evaluation used during destination search."""
+
+    affordable: bool
     utility: float
     value: float
 
@@ -207,6 +216,60 @@ class IncomeNeighborhoodUtility(UtilityPolicy):
             rent_component=rent_component,
             similarity_component=similarity_component,
             growth_component=growth_component,
+            utility=utility,
+            value=value,
+        )
+
+    def evaluate_for_search(
+        self,
+        agent: SchellingAgent,
+        cell: Cell,
+    ) -> LocationEvaluationSummary:
+        """Evaluate a location using only the fields needed for search.
+
+        Destination choice only needs to know whether a cell is affordable and
+        whether its transformed utility clears the satisficing threshold.
+        The full `LocationEvaluation` is still computed later for the chosen
+        destination only.
+        """
+        rent = self._layer_value(
+            agent.model.grid.rent,
+            cell,
+        )
+
+        mean_income = self._layer_value(
+            agent.model.grid.mean_neighbor_income,
+            cell,
+        )
+
+        affordable = self.is_affordable(
+            income=agent.income,
+            rent=rent,
+        )
+
+        utility = self.calculate_utility(
+            rent_component=rent,
+            similarity_component=(
+                -agent.income_similarity_preference
+                * abs(agent.income - mean_income)
+            ),
+            growth_component=(
+                agent.discount_factor
+                * self.income_growth_scaling
+                * self.calculate_spillover(
+                    income=agent.income,
+                    mean_neighbor_income=mean_income,
+                )
+            ),
+        )
+
+        value = self.apply_signed_crra(
+            utility=utility,
+            risk_aversion=agent.risk_aversion,
+        )
+
+        return LocationEvaluationSummary(
+            affordable=affordable,
             utility=utility,
             value=value,
         )
