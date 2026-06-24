@@ -5,11 +5,16 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+import numpy as np
+
 if TYPE_CHECKING:
     from mesa.discrete_space import Cell
 
     from .agents import SchellingAgent
-    from .utility import LocationEvaluation
+    from .utility import (
+        LocationEvaluation,
+        LocationEvaluationSummary,
+    )
 
 
 @dataclass(frozen=True)
@@ -77,12 +82,8 @@ class RandomSatisficingChoice(DestinationChoicePolicy):
         if not satisfactory_candidates:
             return None
 
-        chosen_cell = agent.model.random.choice(
+        chosen_cell, evaluation, value_improvement = agent.model.random.choice(
             satisfactory_candidates
-        )
-
-        evaluation, value_improvement = (
-            agent.evaluate_destination(chosen_cell)
         )
 
         return DestinationCandidate(
@@ -94,11 +95,13 @@ class RandomSatisficingChoice(DestinationChoicePolicy):
     def find_satisfactory_destinations(
         self,
         agent: SchellingAgent,
-    ) -> list[Cell]:
+    ) -> list[tuple[Cell, LocationEvaluationSummary, float]]:
         """Return all visible destinations satisfying the threshold."""
         candidate_cells = self._get_candidate_cells(agent)
 
-        satisfactory_candidates: list[Cell] = []
+        satisfactory_candidates: list[
+            tuple[Cell, LocationEvaluationSummary, float]
+        ] = []
 
         affordable_count = 0
 
@@ -149,7 +152,13 @@ class RandomSatisficingChoice(DestinationChoicePolicy):
             if evaluation.value < aspiration_utility:
                 continue
 
-            satisfactory_candidates.append(cell)
+            satisfactory_candidates.append(
+                (
+                cell,
+                evaluation,
+                value_improvement,
+                )
+            )
 
         agent.last_search_summary = (
             DestinationSearchSummary(
@@ -196,13 +205,28 @@ class RandomSatisficingChoice(DestinationChoicePolicy):
     def _get_candidate_cells(
         agent: SchellingAgent,
     ) -> list[Cell]:
-        """Return empty cells within the agent's fixed vision radius."""
-        nearby_cells = agent.cell.get_neighborhood(
-            radius=agent.vision_radius
+        """Return empty cells within the agent's fixed vision radius.
+
+        Mesa already maintains an `empty` property layer, so we combine the
+        agent's neighborhood mask with that layer rather than checking each
+        cell's occupancy one by one.
+        """
+        grid = agent.model.grid
+
+        neighborhood_mask = grid.get_neighborhood_mask(
+            agent.cell.coordinate,
+            include_center=False,
+            radius=agent.vision_radius,
         )
 
+        candidate_mask = np.logical_and(
+            neighborhood_mask,
+            grid.empty.data,
+        )
+
+        candidate_coordinates = np.argwhere(candidate_mask)
+
         return [
-            cell
-            for cell in nearby_cells
-            if cell.is_empty
+            grid[tuple(coordinate)]
+            for coordinate in candidate_coordinates
         ]
