@@ -12,12 +12,12 @@ from mesa.visualization import (
 from mesa.visualization.components import AgentPortrayalStyle, PropertyLayerStyle, make_space_component
 from matplotlib.figure import Figure
 from mesa.visualization.utils import update_counter
+from mesa.visualization.solara_viz import SpaceRendererComponent
 
 from src.project.model import GentrificationModel
 from src.utils.helpers import (
     generate_vibrant_red_blue_gradient,
 )
-
 
 
 def normalize_income(income: float, max_income: float) -> float:
@@ -27,32 +27,6 @@ def normalize_income(income: float, max_income: float) -> float:
     return income
 
 
-# @solara.component
-# def IncomeBasedSpaceRenderer(model):
-#     """Custom component that computes max_income once per render."""
-#     update_counter.get()  # Required for reactivity
-#
-#     # Compute max_income once per render (not per agent)
-#     max_income = max((agent.income for agent in model.agents), default=1.0)
-#
-#     def agent_portrayal(agent) -> AgentPortrayalStyle:
-#         """Define how a household is displayed."""
-#         income_normalized = normalize_income(agent.income, max_income)
-#         hex_color = generate_vibrant_red_blue_gradient(income_normalized)
-#
-#         return AgentPortrayalStyle(
-#             x=agent.cell.coordinate[0],
-#             y=agent.cell.coordinate[1],
-#             color=hex_color,
-#             marker="o" if agent.satisfied else "x",
-#             size=80,
-#             zorder=3 if agent.satisfied else 2,
-#         )
-#
-#         # Use the standard space component with our computed portrayal
-#
-#     space_component = make_space_component(agent_portrayal)
-#     return space_component(model)
 
 
 def agent_portrayal(agent) -> AgentPortrayalStyle:
@@ -91,26 +65,128 @@ def agent_portrayal(agent) -> AgentPortrayalStyle:
         )
 
 
-selected_layer = solara.reactive("rent")
+# selected_layer = solara.reactive("rent")
+#
+# def property_layer_portrayal(layer):
+#     if layer.name == selected_layer.value:
+#         return PropertyLayerStyle(
+#             color="blue", alpha=0.8, colorbar=True
+#         )
+#     # elif layer.name == "mean_neighbor_income":
+#     #     return PropertyLayerStyle(
+#     #         color="green", alpha=0.8, colorbar=True, vmin=0, vmax=10
+#     #     )
+#     return PropertyLayerStyle(
+#             color="blue", alpha=0.0, colorbar=False
+#         )
+#
+# def layer_selector(layer):
+#     layers = ["rent", "mean_neighbor_income", "neighbor_income_variance","None"]  # Your actual layer names
+#     solara.Select(label="Select Property Layer",
+#                   value=selected_layer,
+#                   values=layers)
 
-def property_layer_portrayal(layer):
-    if layer.name == selected_layer.value:
-        return PropertyLayerStyle(
-            color="blue", alpha=0.8, colorbar=True
-        )
-    # elif layer.name == "mean_neighbor_income":
-    #     return PropertyLayerStyle(
-    #         color="green", alpha=0.8, colorbar=True, vmin=0, vmax=10
-    #     )
-    return PropertyLayerStyle(
-            color="blue", alpha=0.0, colorbar=False
+# def property_layer_portrayal(layer):
+#     if layer.name == selected_layer:
+#         return PropertyLayerStyle(
+#             color="blue", alpha=0.8, colorbar=True
+#         )
+#     return PropertyLayerStyle(
+#         color="blue", alpha=0.0, colorbar=False
+#     )
+
+
+# def property_layer_portrayal(layer):
+#     return PropertyLayerStyle(
+#         color="blue", alpha=0.8, colorbar=True)
+
+
+
+
+@solara.component
+def CustomVisualization(model):
+    """Custom component with layer selector above agent portrayal."""
+    # update_counter.get()  # Required for reactivity
+
+    # Compute max_income once per render (not per agent)
+    max_income = max((agent.income for agent in model.agents), default=1.0)
+
+    available_layers = ["rent", "mean_neighbor_income", "neighbor_income_variance", "None"]
+
+    # State for selected layer
+    selected_layer, set_selected_layer = solara.use_state(
+        available_layers[0] if available_layers else None
+    )
+
+    # Property layer portrayal that only renders the selected layer
+    def property_layer_portrayal(layer):
+        if layer.name == selected_layer:
+            return PropertyLayerStyle(colormap="PuBu", alpha=0.8, colorbar=True)
+        return PropertyLayerStyle(colormap = "PuBu", alpha=0.0, colorbar=False)
+
+    def agent_portrayal(agent) -> AgentPortrayalStyle:
+        """Define how a household is displayed."""
+        max_income = max(agent.model.agents, key=lambda a: a.income).income
+        income_normalized = normalize_income(
+            agent.income, max_income
         )
 
-def layer_selector(layer):
-    layers = ["rent", "mean_neighbor_income", "neighbor_income_variance","None"]  # Your actual layer names
-    solara.Select(label="Select Property Layer",
-                  value=selected_layer,
-                  values=layers)
+        rent = agent.cell.rent
+        income = agent.income
+
+        is_homeless = income < rent * model.affordability_share
+
+        if is_homeless:
+            return AgentPortrayalStyle(
+                # Explicit coordinates are retained because the installed
+                # Mesa renderer appears to require them.
+                x=agent.cell.coordinate[0],
+                y=agent.cell.coordinate[1],
+                color=agent.colour,
+                marker="s",
+                size=80,
+                zorder=3 if agent.satisfied else 2,
+            )
+        else:
+            return AgentPortrayalStyle(
+                # Explicit coordinates are retained because the installed
+                # Mesa renderer appears to require them.
+                x=agent.cell.coordinate[0],
+                y=agent.cell.coordinate[1],
+                color=agent.colour,
+                marker="o" if agent.satisfied else "^",
+                size=80,
+                zorder=3 if agent.satisfied else 2,
+            )
+
+    renderer = SpaceRenderer(model, backend="matplotlib")
+    renderer.setup_agents(agent_portrayal)
+    renderer.setup_propertylayer(property_layer_portrayal)
+    renderer.render()
+
+
+
+    with solara.Column():
+        # Layer selector at the top
+        if available_layers:
+            solara.Select(
+                label="Property Layer:",
+                value=selected_layer,
+                on_value=set_selected_layer,
+                values=available_layers
+            )
+
+        # Space component below the selector
+        # space_component = make_space_component(
+        #     agent_portrayal=agent_portrayal,
+        #     propertylayer_portrayal=property_layer_portrayal,
+        #     backend = "matplotlib",
+        #     post_process=post_process
+        # )
+        # space_component(model)
+        SpaceRendererComponent(model, renderer)
+
+
 
 
 def get_model_statistics(model):
@@ -492,15 +568,15 @@ model = GentrificationModel(
 )
 
 
-renderer = SpaceRenderer(
-    model,
-    backend="matplotlib",
-)
-
-renderer.setup_agents(agent_portrayal)
-renderer.setup_propertylayer(property_layer_portrayal)
-renderer.post_process = post_process
-renderer.render()
+# renderer = SpaceRenderer(
+#     model,
+#     backend="matplotlib",
+# )
+#
+# renderer.setup_agents(agent_portrayal)
+# renderer.setup_propertylayer(property_layer_portrayal)
+# renderer.post_process = post_process
+# renderer.render()
 
 @solara.component
 def IncomeHistogram(model):
@@ -683,9 +759,10 @@ def SegregationMetricsPanel(model):
 
 page = SolaraViz(
     model,
-    renderer,
+    # renderer,
     components=[
-        layer_selector,
+        CustomVisualization,
+        # layer_selector,
         IncomeHistogram,
         RentVsIncomeScatter,
         get_model_statistics,
