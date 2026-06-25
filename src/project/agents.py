@@ -76,6 +76,7 @@ class SchellingAgent(CellAgent):
             * self.initial_income
             + 1.0
         )
+        self.disposeable_income = self.income - self.model.grid.rent.data[self.cell.coordinate[0], self.cell.coordinate[1]]
 
         self.vision_radius = min(
             self.model.maximum_vision_radius,
@@ -145,10 +146,10 @@ class SchellingAgent(CellAgent):
                 "income_similarity_preference must be non-negative."
             )
 
-        if not 0.0 <= discount_factor <= 1.0:
-            raise ValueError(
-                "discount_factor must lie between 0 and 1."
-            )
+        # if not 0.0 <= discount_factor <= 1.0:
+        #     raise ValueError(
+        #         "discount_factor must lie between 0 and 1."
+        #     )
 
         # if not 0.0 <= risk_aversion < 5.0:
         #     raise ValueError(
@@ -365,6 +366,12 @@ class SchellingAgent(CellAgent):
         self.moved_this_step = False
         self.last_move_successful = False
         self.model.destination_conflicts += 1
+
+    def change_disposeable_income(self) -> float:
+        """Calculate the agent's disposeable income as the difference
+        between income and housing cost at the current location."""
+
+        self.disposeable_income = self.income - self.model.grid.rent.data[self.cell.coordinate[0], self.cell.coordinate[1]]
 
     def update_satisfaction(self) -> None:
         if self.moved_this_step:

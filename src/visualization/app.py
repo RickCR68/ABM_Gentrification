@@ -590,6 +590,16 @@ def IncomeHistogram(model):
     solara.FigureMatplotlib(fig)
 
 @solara.component
+def DisposeableIncomeHistogram(model):
+    update_counter.get()  # Required to trigger updates
+    fig = Figure(figsize=(6, 4))
+    ax = fig.subplots()
+    disposeable_income_vals = [agent.disposeable_income for agent in model.agents]
+    ax.hist(disposeable_income_vals)
+    ax.set_title("Disposeable Income Histogram")
+    solara.FigureMatplotlib(fig)
+
+@solara.component
 def RentVsIncomeScatter(model):
     update_counter.get()  # Required to trigger updates
     fig = Figure(figsize=(6, 4))
@@ -765,6 +775,7 @@ page = SolaraViz(
         CustomVisualization,
         # layer_selector,
         IncomeHistogram,
+        DisposeableIncomeHistogram,
         RentVsIncomeScatter,
         get_model_statistics,
         SegregationMetricsPanel,
@@ -789,6 +800,7 @@ page = SolaraViz(
     name="Gentrification model",
 )
 
+page_2 = page
 
 page
 
