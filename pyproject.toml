@@ -8,4 +8,5 @@ dependencies = [
     "mesa[rec,viz]>=3",
     "pandas>=2.3.3",
     "salib>=1.5.2",
+    "seaborn>=0.13.2",
 ]

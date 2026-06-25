@@ -13,6 +13,7 @@ wheels/
 # Mac issues
 .DS_Store
 
+# Results
 results/
 ofat_results/
 gsa_results/
