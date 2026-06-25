@@ -21,6 +21,8 @@ from mesa.visualization.components import AgentPortrayalStyle, PropertyLayerStyl
 from mesa.visualization.solara_viz import SpaceRendererComponent
 from mesa.visualization.utils import update_counter
 
+from src.utils.helpers import generate_vibrant_red_blue_gradient
+from src.project.experimental_models import SchellingGridExperiment
 from src.project.model import GentrificationModel
 
 
@@ -589,6 +591,84 @@ def PlotGallery(model, default_view: str = "General"):
 # -----------------------------------------------------------------------------
 # Spatial component with property-layer selector
 # -----------------------------------------------------------------------------
+@solara.component
+def NonQuantileColoringSpatialView(model):
+    update_counter.get()
+    size = solara.use_reactive({"width": 620, "height": 560})
+    selected_layer = solara.use_reactive("rent")
+
+    width_px = max(int(size.value.get("width", 620)), 300)
+    total_height_px = max(int(size.value.get("height", 560)), 330)
+    plot_height_px = max(total_height_px - 95, 230)
+    dpi = 100
+
+    max_income = max((float(agent.income) for agent in model.agents), default=1.0)
+    min_income = min((float(agent.income) for agent in model.agents), default=0.0)
+    for agent in model.agents:
+        agent.colour = generate_vibrant_red_blue_gradient(
+            float(agent.income), min_income, max_income
+        )
+
+    def agent_portrayal(agent) -> AgentPortrayalStyle:
+        rent = float(agent.cell.rent)
+        income = float(agent.income)
+        homeless = income < rent * float(agent.model.affordability_share)
+        return AgentPortrayalStyle(
+            x=agent.cell.coordinate[0],
+            y=agent.cell.coordinate[1],
+            color=agent.colour,
+            marker="s" if homeless else ("o" if agent.satisfied else "^"),
+            size=80,
+            zorder=3 if agent.satisfied else 2,
+        )
+
+    def property_layer_portrayal(layer):
+        if selected_layer.value == "None" or layer.name != selected_layer.value:
+            return PropertyLayerStyle(colormap="PuBu", alpha=0.0, colorbar=False)
+        return PropertyLayerStyle(colormap="PuBu", alpha=0.8, colorbar=True)
+
+    def post_process(ax):
+        fig = ax.figure
+        fig.set_size_inches(
+            max(width_px - 20, 280) / dpi,
+            max(plot_height_px - 10, 220) / dpi,
+            forward=True,
+        )
+        # Do not use tight_layout here: Mesa may already have made a colorbar.
+        has_colorbar = len(fig.axes) > 1
+        fig.subplots_adjust(
+            left=0.08,
+            right=0.84 if has_colorbar else 0.97,
+            bottom=0.08,
+            top=0.96,
+        )
+
+    renderer = SpaceRenderer(model, backend="matplotlib")
+    renderer.setup_agents(agent_portrayal)
+    renderer.setup_propertylayer(property_layer_portrayal)
+    renderer.post_process = post_process
+    renderer.render()
+
+    with ViewListener(
+        view_data=size.value,
+        on_view_data=size.set,
+        style={
+            "width": "100%",
+            "height": "100%",
+            "min-height": "360px",
+            "overflow": "hidden",
+        },
+    ):
+        with solara.Column(gap="4px", style={"width": "100%", "height": "100%"}):
+            solara.Select(
+                label="Property layer",
+                value=selected_layer,
+                values=["rent", "mean_neighbor_income", "neighbor_income_variance", "None"],
+                style={"max-width": "340px"},
+            )
+            with solara.Div(style={"overflow": "hidden", "min-height": "0"}):
+                SpaceRendererComponent(model, renderer)
+
 
 @solara.component
 def SpatialView(model):
@@ -719,14 +799,75 @@ def make_experiment_page(experiment_key: str):
     ExperimentPage.__name__ = f"{experiment_key.title()}ExperimentPage"
     return ExperimentPage
 
+def make_schelling_exp_page():
+    @solara.component
+    def SchellingStablePage():
+        solara.Title("Schelling Stable Layout Experiment")
+        solara.Markdown(
+            "This page runs a Schelling model to generate a stable layout and then "
+            "populates the Gentrification model with agents matching that layout."
+        )
+
+        # Initialize the SchellingGridExperiment model
+        model = SchellingGridExperiment(
+            width=BASE_VALUES["width"],
+            height=BASE_VALUES["height"],
+            density=BASE_VALUES["density"],
+            neighborhood_radius=BASE_VALUES["neighborhood_radius"],
+            initial_income_min=BASE_VALUES["initial_income_min"],
+            initial_income_max=BASE_VALUES["initial_income_max"],
+            affordability_share=BASE_VALUES["affordability_share"],
+            income_similarity_min=BASE_VALUES["income_similarity_min"],
+            income_similarity_max=BASE_VALUES["income_similarity_max"],
+            discount_factor_min=BASE_VALUES["discount_factor_min"],
+            discount_factor_max=BASE_VALUES["discount_factor_max"],
+            risk_aversion_min=BASE_VALUES["risk_aversion_min"],
+            risk_aversion_max=BASE_VALUES["risk_aversion_max"],
+            rationality_min=BASE_VALUES["rationality_min"],
+            rationality_max=BASE_VALUES["rationality_max"],
+            satisficing_threshold=BASE_VALUES["satisficing_threshold"],
+            vision_income_scale=BASE_VALUES["vision_income_scale"],
+            maximum_vision_radius=BASE_VALUES["maximum_vision_radius"],
+            steps_until_satisfied=BASE_VALUES["steps_until_satisfied"],
+            rent_adjustment_rate=BASE_VALUES["rent_adjustment_rate"],
+            income_growth_scaling=BASE_VALUES["income_growth_scaling"],
+            income_volatility=BASE_VALUES["income_volatility"],
+            moving_cost=BASE_VALUES["moving_cost"],
+            rejection_cost=BASE_VALUES["rejection_cost"],
+            neighborhood_risk_aversion=BASE_VALUES["neighborhood_risk_aversion"],
+            neighborhood_rationality=BASE_VALUES["neighborhood_rationality"],
+            qre_tolerance=BASE_VALUES["qre_tolerance"],
+            qre_maximum_iterations=BASE_VALUES["qre_maximum_iterations"],
+            qre_damping=BASE_VALUES["qre_damping"],
+            keep_game_history=BASE_VALUES["keep_game_history"]
+        )
+
+        # Build the parameter controls for this experiment
+        params = build_model_params(EXPERIMENTS["baseline"])  # Use baseline params for now
+
+        # Create the dashboard with the spatial view and plots
+        dashboard = SolaraViz(
+            model,
+            components=[
+                NonQuantileColoringSpatialView,
+                lambda m: PlotGallery(m, default_view="General"),
+                CurrentState,
+            ],
+            model_params=params,
+            name="Schelling Stable Layout Experiment",
+        )
+        dashboard
+
+    return SchellingStablePage
 
 HomePage = make_experiment_page("baseline")
 GentrificationPage = make_experiment_page("gentrification")
 GamePage = make_experiment_page("game")
-ExpPage = make_experiment_page("SchellingStable")
+ExpPage = make_schelling_exp_page()
 
 routes = [
     solara.Route(path="/", component=HomePage, label="Baseline"),
     solara.Route(path="gentrification", component=GentrificationPage, label="Gentrification"),
     solara.Route(path="game", component=GamePage, label="Game"),
+    solara.Route(path="schellingstable", component=ExpPage, label="Schelling Stable"),
 ]

@@ -1,18 +1,25 @@
 from itertools import accumulate
+import math
 
 
-def generate_vibrant_red_blue_gradient(val):
-    # val ranges from 0.0 to 1.0
-    g = 0  # Keep green completely turned off to avoid yellows/greens
+def generate_vibrant_red_blue_gradient(income, min_val=0.1, max_val=1.1):
+    # 1. Clamp income within the bounds and normalize to a 0.0 -> 1.0 range
+    income = max(min_val, min(max_val, income))
+    # log scale for color mapping: map income to a color gradient from red (low) to blue (high)
+    # Normalize the income to a 0.0 -> 1.0 range
+    val = (income - min_val) / (max_val - min_val)
+    # Apply log scale for more visually distinct gradients
+    val = math.log(val * (math.e - 1) + 1)
 
+    g = 0  # No green
+
+    # 2. Your vibrant split logic
     if val <= 0.5:
-        # First half (0.0 to 0.5): Red stays at max brightness, Blue ramps up
-        # This smoothly transitions: Red -> Pink -> Vibrant Magenta/Purple
+        # Red stays max, Blue ramps up (Red -> Pink -> Vibrant Magenta)
         r = 255
         b = int((val / 0.5) * 255)
     else:
-        # Second half (0.5 to 1.0): Blue stays at max brightness, Red ramps down
-        # This smoothly transitions: Vibrant Magenta/Purple -> Violet -> Blue
+        # Blue stays max, Red ramps down (Vibrant Magenta -> Violet -> Blue)
         r = int(((1.0 - val) / 0.5) * 255)
         b = 255
 
