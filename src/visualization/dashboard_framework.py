@@ -1,17 +1,11 @@
 from __future__ import annotations
 
-"""Config-driven Solara/Mesa dashboard framework.
 
-Put this file and ``resize_observer.vue`` in ``src/visualization`` and run:
-
-    solara run src/visualization/dashboard_framework.py
-
-Edit only these main configuration objects in normal use:
-
-* PLOT_SPECS: what every plot displays.
-* PLOT_VIEWS: which plots appear in each dropdown view and their order.
-* EXPERIMENTS: which parameters are adjustable on each URL/page.
-"""
+# """""
+# * PLOT_SPECS: what every plot displays.
+# * PLOT_VIEWS: which plots appear in each dropdown view and their order.
+# * EXPERIMENTS: which parameters are adjustable on each URL/page.
+# """
 
 from dataclasses import dataclass, field
 from typing import Any, Callable, Iterable, Mapping, Sequence
