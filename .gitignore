@@ -7,8 +7,18 @@ wheels/
 *.egg-info
 
 # Virtual environments
-.venv
-results/
+.venv/
+.vscode/
 
 # Mac issues
 .DS_Store
+
+# Results
+results/
+ofat_results/
+gsa_results/
+
+# profiling
+
+profiles/
+.prof

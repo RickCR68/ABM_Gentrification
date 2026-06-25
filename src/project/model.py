@@ -36,8 +36,8 @@ class GentrificationModel(Model):
     def __init__(
         self,
         *,
-        width: int = 20,
-        height: int = 20,
+        width: int = 11,
+        height: int = 11,
         density: float = 0.8,
 
         neighborhood_radius: int = 1,
@@ -106,9 +106,7 @@ class GentrificationModel(Model):
             income_similarity_min=income_similarity_min,
             income_similarity_max=income_similarity_max,
             satisficing_threshold=satisficing_threshold,
-            minimum_absolute_improvement=(
-                minimum_absolute_improvement
-            ),
+            minimum_absolute_improvement=minimum_absolute_improvement,
             vision_income_scale=vision_income_scale,
             maximum_vision_radius=maximum_vision_radius,
             steps_until_satisfied=steps_until_satisfied,
@@ -116,20 +114,15 @@ class GentrificationModel(Model):
             income_volatility=income_volatility,
             moving_cost=moving_cost,
             rejection_cost=rejection_cost,
-            neighborhood_risk_aversion=(
-                neighborhood_risk_aversion
-            ),
-            neighborhood_rationality=(
-                neighborhood_rationality
-            ),
+            neighborhood_risk_aversion=neighborhood_risk_aversion,
+            neighborhood_rationality=neighborhood_rationality,
             qre_tolerance=qre_tolerance,
-            qre_maximum_iterations=(
-                qre_maximum_iterations
-            ),
+            qre_maximum_iterations=qre_maximum_iterations,
             qre_damping=qre_damping,
         )
         #????
         self.keep_agents = keep_agents
+
         self.affordability_share = affordability_share
 
         self.width = width
@@ -414,7 +407,10 @@ class GentrificationModel(Model):
             agent_reporters={
                 "initial_income": "initial_income",
                 "income": "income",
-
+                "cell_coordinate": lambda a: a.cell.coordinate,
+                "disposeable_income": (
+                    'disposeable_income'
+                ),
                 "income_similarity_preference": (
                     "income_similarity_preference"
                 ),
@@ -517,16 +513,6 @@ class GentrificationModel(Model):
                 raise ValueError(
                     f"{prefix}_min cannot exceed {prefix}_max."
                 )
-
-        if not (
-            0.0
-            <= parameters["discount_factor_min"]
-            <= parameters["discount_factor_max"]
-            <= 1.0
-        ):
-            raise ValueError(
-                "Discount factors must lie in [0, 1]."
-            )
 
         # if not (
         #     # 0.0
@@ -686,6 +672,7 @@ class GentrificationModel(Model):
 
         # 1. Income changes.
         self.agents.shuffle_do("change_income")
+        self.agents.shuffle_do("change_disposeable_income")
 
         # 2. Refresh local incomes and rents.
         self.neighborhood_state.refresh_current_income(
