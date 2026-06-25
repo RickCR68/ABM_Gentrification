@@ -675,13 +675,13 @@ def CurrentState(model):
         f"""
 ### Current state
 
-**Population:** {len(model.agents)}  
-**Stable households:** {model.percentage_satisfied():.1f}%  
-**Successful moves:** {model.successful_moves}  
-**Failed searches:** {model.failed_searches}  
-**Mean income:** {model.city_mean_income():.3f}  
-**Mean rent:** {model.mean_rent():.3f}  
-**Mean utility:** {model.mean_utility():.3f}  
+**Population:** {len(model.agents)}
+**Stable households:** {model.percentage_satisfied():.1f}%
+**Successful moves:** {model.successful_moves}
+**Failed searches:** {model.failed_searches}
+**Mean income:** {model.city_mean_income():.3f}
+**Mean rent:** {model.mean_rent():.3f}
+**Mean utility:** {model.mean_utility():.3f}
 **Rent/income adjustment ratio:** {ratio_text}
 """
     )
@@ -723,6 +723,7 @@ def make_experiment_page(experiment_key: str):
 HomePage = make_experiment_page("baseline")
 GentrificationPage = make_experiment_page("gentrification")
 GamePage = make_experiment_page("game")
+ExpPage = make_experiment_page("SchellingStable")
 
 routes = [
     solara.Route(path="/", component=HomePage, label="Baseline"),
