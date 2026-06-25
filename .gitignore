@@ -12,3 +12,6 @@ results/
 
 # Mac issues
 .DS_Store
+
+# Data files
+snellius_results/
