@@ -104,7 +104,7 @@ if __name__ == "__main__":
     # Create all tasks matching their universal global matrix run_id indices
     all_tasks = [(param_values[i], i) for i in range(total_tasks)]
     
-    # Slice the task list into 4 exact quadrants
+    # Slice the task list into 8 exact quadrants
     chunk_size = total_tasks // 8
     start_idx = (CURRENT_PART - 1) * chunk_size
     end_idx = start_idx + chunk_size if CURRENT_PART < 8 else total_tasks
