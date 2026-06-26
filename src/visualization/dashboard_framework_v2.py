@@ -1731,8 +1731,8 @@ def make_schelling_exp_page():
 
         # Initialize the SchellingGridExperiment model
         model = SchellingGridExperiment(
-            width=BASE_VALUES["width"],
-            height=BASE_VALUES["height"],
+            width=20,
+            height=20,
             density=BASE_VALUES["density"],
             neighborhood_radius=BASE_VALUES["neighborhood_radius"],
             initial_income_min=BASE_VALUES["initial_income_min"],

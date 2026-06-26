@@ -11,6 +11,9 @@ class SchellingGridExperiment(GentrificationModel):
         neighborhood_radius: int = 1,
         **kwargs,
     ) -> None:
+        # remove scenario from kwargs if it exists, since we will create our own
+        kwargs = {k: v for k, v in kwargs.items() if k != "scenario"}
+
         # 1. Let the parent run its default setup (which creates its own default agents)
         super().__init__(
             neighborhood_radius=neighborhood_radius,
