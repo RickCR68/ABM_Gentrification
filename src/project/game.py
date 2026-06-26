@@ -77,6 +77,8 @@ class ApplicationGameRecord:
 
     step_number: int
     agent_id: int
+    agent_income: float
+    income_group: int
     candidate_coordinate: tuple[int, ...]
 
     payoffs: GamePayoffs
@@ -659,11 +661,38 @@ class ApplicationGamePolicy:
             (1, 1): "stay_reject",
         }
 
+        thresholds = np.asarray(
+            getattr(
+                agent.model,
+                "income_thresholds",
+                [],
+            ),
+            dtype=float,
+        )
+
+        if thresholds.size == 6:
+            income_group = int(
+                np.searchsorted(
+                    thresholds,
+                    float(agent.income),
+                    side="right",
+                )
+            )
+        else:
+            income_group = 3
+
+        income_group = min(
+            max(income_group, 0),
+            6,
+        )
+
         return ApplicationGameRecord(
             step_number=int(
                 getattr(agent.model, "steps", 0)
             ),
             agent_id=agent.unique_id,
+            agent_income=float(agent.income),
+            income_group=income_group,
             candidate_coordinate=(
                 candidate.cell.coordinate
             ),
