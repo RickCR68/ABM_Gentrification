@@ -66,3 +66,32 @@ class SchellingGridExperiment(GentrificationModel):
 
             # Safely place it on the completely wiped grid
             self.grid._cells[stable_pos].agents[0] = new_agent
+        self.neighborhood_state.refresh_current_income(
+            self
+        )
+        self.neighborhood_state.initialize_rent(self)
+
+# class RegicideExperiment(GentrificationModel):
+#     """A model that clears default agents and respawns them using a Regicide layout."""
+
+#     def __init__(
+#         self,
+#         *,
+#         neighborhood_radius: int = 1,
+#         **kwargs,
+#     ) -> None:
+#         # 1. Let the parent run its default setup (which creates its own default agents)
+#         super().__init__(
+#             neighborhood_radius=neighborhood_radius,
+#             **kwargs,
+#         )
+
+#     def _find_kings(self) -> list:
+#         """Finds the positions of the 'king' agents in the grid."""
+#         kings = []
+#         for agent in self.schedule.agents:
+#             if isinstance(agent, GentrificationAgent) and agent.is_king:
+#                 kings.append(agent.cell.position)
+#         return kings
+
+#     def step(self) -> None:
