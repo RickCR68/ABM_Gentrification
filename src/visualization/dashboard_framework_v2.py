@@ -465,8 +465,8 @@ PLOT_SPECS: dict[str, PlotSpec] = {
 # Order in each tuple is the display order.
 PLOT_VIEWS: dict[str, tuple[str, ...]] = {
     "General": (
-        "satisfaction", "movement_counts", "income_rent",
-        "utility", "income_histogram", "rent_income_scatter",
+        "income_histogram", "rent_income_scatter", "satisfaction", "movement_counts", "income_rent",
+        "utility",
     ),
     "Gentrification metrics": (
         "gentrification", "segregation", "diversity",
