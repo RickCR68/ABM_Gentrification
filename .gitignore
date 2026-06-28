@@ -24,4 +24,4 @@ snellius_results/
 # profiling
 
 profiles/
-.prof
+*.prof
