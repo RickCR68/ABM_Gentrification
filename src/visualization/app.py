@@ -512,7 +512,8 @@ model_params = {
     "qre_maximum_iterations": 1000,
     "qre_damping": 0.5,
 
-    "keep_game_history": True,
+    "keep_game_history": False,
+    "keep_agents": False,
 
 }
 
@@ -563,7 +564,8 @@ model = GentrificationModel(
     qre_maximum_iterations=1000,
     qre_damping=0.5,
 
-    keep_game_history=True,
+    keep_game_history=False,
+    keep_agents=False,
 
     rng=42,
 )

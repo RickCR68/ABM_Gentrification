@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 from collections import defaultdict
 from itertools import accumulate
+from threading import RLock
 
 import numpy as np
 
@@ -28,6 +29,26 @@ from .neighbourhood_state import (
 )
 from .neighborhoods import MooreNeighborhood
 from .utility import IncomeNeighborhoodUtility
+
+
+class ThreadSafeDataCollector(DataCollector):
+    """DataCollector variant that serializes collection and dataframe reads."""
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._lock = RLock()
+
+    def collect(self, model) -> None:
+        with self._lock:
+            super().collect(model)
+
+    def get_model_vars_dataframe(self):
+        with self._lock:
+            return super().get_model_vars_dataframe()
+
+    def get_agent_vars_dataframe(self):
+        with self._lock:
+            return super().get_agent_vars_dataframe()
 
 
 class GentrificationModel(Model):
@@ -120,7 +141,7 @@ class GentrificationModel(Model):
             qre_maximum_iterations=qre_maximum_iterations,
             qre_damping=qre_damping,
         )
-        #????
+        
         self.keep_agents = keep_agents
 
         self.affordability_share = affordability_share
@@ -180,7 +201,7 @@ class GentrificationModel(Model):
         )
 
         self.keep_game_history = keep_game_history
-        self.game_history = []
+        self.game_history: list[dict[str, object]] = []
         self.game_records_this_step = []
 
         self.satisfied_count = 0
@@ -271,6 +292,7 @@ class GentrificationModel(Model):
         self.neighborhood_state.initialize_rent(self)
 
         self._update_agent_states()
+        self._update_percentiles()
 
         self.datacollector.collect(self)
 
@@ -302,7 +324,7 @@ class GentrificationModel(Model):
 
     def _create_datacollector(self) -> DataCollector:
         """Construct the Mesa data collector."""
-        return DataCollector(
+        return ThreadSafeDataCollector(
             model_reporters={
                 "satisfied_count": "satisfied_count",
                 "pct_satisfied": (
@@ -702,6 +724,7 @@ class GentrificationModel(Model):
         # 7. Record aggregate outputs.
         self.datacollector.collect(self)
 
+
     def percentage_satisfied(self) -> float:
         """Return the percentage of duration-satisfied households."""
         population = len(self.agents)
@@ -854,6 +877,27 @@ class GentrificationModel(Model):
 
         return gini_coefficient
 
+    def record_game_outcome(
+        self,
+        game_record,
+    ) -> None:
+        """Store one application-game result."""
+
+        # Full record for current-step QRE and Nash metrics.
+        self.game_records_this_step.append(game_record)
+
+        # Simplified cumulative history for the dashboard plots.
+        if self.keep_game_history:
+            self.game_history.append(
+                {
+                    "step": int(game_record.step_number),
+                    "agent_id": game_record.agent_id,
+                    "income": float(game_record.agent_income),
+                    "income_group": int(game_record.income_group),
+                    "outcome": game_record.realized_game_outcome,
+                }
+            )
+     
     def mean_qre_move_probability(self) -> float:
         if not self.game_records_this_step:
             return 0.0
@@ -958,7 +1002,7 @@ class GentrificationModel(Model):
 
         self.income_thresholds = np.quantile(
             incomes,
-            [0.01, 0.15, 0.4, 0.6, 0.85, 0.99]
+            [0.15, 0.35, 0.55, 0.7, 0.85, 0.99]
         )
         self.agents.do("update_visuals")
 

@@ -214,38 +214,24 @@ def spatial_entropy(model: GentrificationModel) -> float:
 
     quartiles = np.quantile(incomes, [0.25, 0.5, 0.75])
 
-    # Classify agents into income groups (4 groups: 0, 1, 2, 3)
-    income_groups = np.zeros(len(incomes), dtype=int)
-    for i, income in enumerate(incomes):
-        if income <= quartiles[0]:
-            income_groups[i] = 0
-        elif income <= quartiles[1]:
-            income_groups[i] = 1
-        elif income <= quartiles[2]:
-            income_groups[i] = 2
-        else:
-            income_groups[i] = 3
+    # Classify agents into income groups (4 groups: 0, 1, 2, 3).
+    # `np.digitize` keeps this vectorized and preserves the same quartile split.
+    income_groups = np.digitize(incomes, quartiles, right=True)
 
     # Divide grid into regions (e.g., 4x4 regions for computational efficiency)
     num_regions_per_side = max(2, model.width // 5)
     region_width = model.width / num_regions_per_side
     region_height = model.height / num_regions_per_side
 
-    # Count income group distributions per region
+    # Count income group distributions per region.
     region_distributions = {}
-    agent_positions = {}
 
-    for agent in model.agents:
+    for agent, group in zip(model.agents, income_groups):
         x, y = agent.cell.coordinate
         region_x = int(x / region_width)
         region_y = int(y / region_height)
         region_id = (min(region_x, num_regions_per_side - 1),
                      min(region_y, num_regions_per_side - 1))
-
-        income_idx = np.where(
-            np.array([ag.income for ag in model.agents]) == agent.income
-        )[0][0]
-        group = income_groups[income_idx]
 
         if region_id not in region_distributions:
             region_distributions[region_id] = [0, 0, 0, 0]
@@ -306,38 +292,24 @@ def neighborhood_heterogeneity(model: GentrificationModel) -> float:
     heterogeneities = []
 
     for agent in model.agents:
-        # Get neighborhood (using model's defined neighborhood_definition)
-        x, y = agent.cell.coordinate
-        neighbor_incomes = []
+        neighbors = model.neighborhood_definition.get_neighbors(
+            agent.cell
+        )
 
-        # Moore neighborhood
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
-                if dx == 0 and dy == 0:
-                    continue
+        if not neighbors:
+            continue
 
-                nx = (x + dx) % model.width
-                ny = (y + dy) % model.height
+        neighbor_incomes = [
+            neighbor.income
+            for neighbor in neighbors
+        ]
+        neighbor_incomes.append(agent.income)
 
-                # Get cell and its resident using proper Mesa API
-                try:
-                    # Use empties_iter or all_cells to find agents at coordinate
-                    neighbor_cell = model.grid.empty_cells[0] if False else None  # Placeholder
+        mean_income = float(np.mean(neighbor_incomes))
 
-                    # Direct approach: iterate all agents to find neighbors
-                    for other_agent in model.agents:
-                        if other_agent.cell.coordinate == (nx, ny):
-                            neighbor_incomes.append(other_agent.income)
-                except (IndexError, KeyError):
-                    pass
-
-        if len(neighbor_incomes) > 1:
-            neighbor_incomes.append(agent.income)  # Include self
-            mean_income = np.mean(neighbor_incomes)
-
-            if mean_income > 0:
-                cv = np.std(neighbor_incomes) / mean_income
-                heterogeneities.append(cv)
+        if mean_income > 0.0:
+            cv = float(np.std(neighbor_incomes)) / mean_income
+            heterogeneities.append(cv)
 
     if not heterogeneities:
         return 0.0

@@ -6,13 +6,13 @@ from typing import TYPE_CHECKING
 from mesa.discrete_space import CellAgent
 
 COLORS = [
-    "#8B0000",  # darkest red
-    "#D73027",
-    "#FC8D59",
-    "#FEE08B",
-    "#D9EF8B",
-    "#91CF60",
-    "#1A9850",  # darkest green
+    "#920E1D",
+    "#A7380C",
+    "#C55B2E",
+    "#FFD68A",
+    "#6BBE6C",
+    "#107E22",
+    "#145506",  
 ]
 
 if TYPE_CHECKING:
@@ -227,7 +227,6 @@ class SchellingAgent(CellAgent):
             * spillover
         )
 
-        #TODO: make volatility a function of local income variance
         volatility = self.model.income_volatility
 
         shock = float(
@@ -280,14 +279,9 @@ class SchellingAgent(CellAgent):
             )
         )
 
-        self.model.game_records_this_step.append(
+        self.model.record_game_outcome(
             game_record
         )
-
-        if self.model.keep_game_history:
-            self.model.game_history.append(
-                game_record
-            )
 
         self.last_game_record = game_record
 

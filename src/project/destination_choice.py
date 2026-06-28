@@ -5,11 +5,16 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+import numpy as np
+
 if TYPE_CHECKING:
     from mesa.discrete_space import Cell
 
     from .agents import SchellingAgent
-    from .utility import LocationEvaluation
+    from .utility import (
+        LocationEvaluation,
+        LocationEvaluationSummary,
+    )
 
 
 @dataclass(frozen=True)
@@ -77,19 +82,25 @@ class RandomSatisficingChoice(DestinationChoicePolicy):
         if not satisfactory_candidates:
             return None
 
-        return agent.model.random.choice(
+        chosen_cell, evaluation, value_improvement = agent.model.random.choice(
             satisfactory_candidates
+        )
+
+        return DestinationCandidate(
+            cell=chosen_cell,
+            evaluation=evaluation,
+            value_improvement=value_improvement,
         )
 
     def find_satisfactory_destinations(
         self,
         agent: SchellingAgent,
-    ) -> list[DestinationCandidate]:
+    ) -> list[tuple[Cell, LocationEvaluationSummary, float]]:
         """Return all visible destinations satisfying the threshold."""
         candidate_cells = self._get_candidate_cells(agent)
 
         satisfactory_candidates: list[
-            DestinationCandidate
+            tuple[Cell, LocationEvaluationSummary, float]
         ] = []
 
         affordable_count = 0
@@ -103,9 +114,14 @@ class RandomSatisficingChoice(DestinationChoicePolicy):
             + required_improvement
         )
 
+        utility_policy = agent.model.utility_policy
+
         for cell in candidate_cells:
-            evaluation, value_improvement = (
-                agent.evaluate_destination(cell)
+            evaluation = (
+                utility_policy.evaluate_for_search(
+                    agent=agent,
+                    cell=cell,
+                )
             )
 
             if not evaluation.affordable:
@@ -116,6 +132,11 @@ class RandomSatisficingChoice(DestinationChoicePolicy):
             # Affordable locations should normally have finite utility.
             if not math.isfinite(evaluation.value):
                 continue
+
+            value_improvement = (
+                evaluation.value
+                - agent.current_value
+            )
 
             # If the current residence is unaffordable, its utility may
             # equal -inf. In that case, every affordable destination with
@@ -132,12 +153,10 @@ class RandomSatisficingChoice(DestinationChoicePolicy):
                 continue
 
             satisfactory_candidates.append(
-                DestinationCandidate(
-                    cell=cell,
-                    evaluation=evaluation,
-                    value_improvement=(
-                        value_improvement
-                    ),
+                (
+                cell,
+                evaluation,
+                value_improvement,
                 )
             )
 
@@ -186,13 +205,28 @@ class RandomSatisficingChoice(DestinationChoicePolicy):
     def _get_candidate_cells(
         agent: SchellingAgent,
     ) -> list[Cell]:
-        """Return empty cells within the agent's fixed vision radius."""
-        nearby_cells = agent.cell.get_neighborhood(
-            radius=agent.vision_radius
+        """Return empty cells within the agent's fixed vision radius.
+
+        Mesa already maintains an `empty` property layer, so we combine the
+        agent's neighborhood mask with that layer rather than checking each
+        cell's occupancy one by one.
+        """
+        grid = agent.model.grid
+
+        neighborhood_mask = grid.get_neighborhood_mask(
+            agent.cell.coordinate,
+            include_center=False,
+            radius=agent.vision_radius,
         )
 
+        candidate_mask = np.logical_and(
+            neighborhood_mask,
+            grid.empty.data,
+        )
+
+        candidate_coordinates = np.argwhere(candidate_mask)
+
         return [
-            cell
-            for cell in nearby_cells
-            if cell.is_empty
+            grid[tuple(coordinate)]
+            for coordinate in candidate_coordinates
         ]
