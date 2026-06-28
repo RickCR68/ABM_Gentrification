@@ -1,45 +1,31 @@
-# Agent Based Gentrification
+# Agent Based Modelling - Group 2
 
 ## The Idea
 
-Consists of making changes to the default Segretation model (included in mesa) and evaluating how these might impact the model's stability or time to stability, and maybe seeing if these introduce dynamics like genrifiaction. The main changes include:
+Introduces more Decision-making steps into the regular Schelling [Agents](https://mesa.readthedocs.io/latest/examples/basic/schelling.html#agents) provided by [Mesa](https://mesa.readthedocs.io/latest/).
 
-1. Changing from binary 'blue/red' groups to a gradient of values, and having neighborhoods be defined by likeness;
-2. Introducing a neighborhood "aproval" before an agent's move;
-3. ...
-
-## (Provisory) Work division:
-
-## Analysis:
-
-> [!NOTE]
-> modeling parameters and requirements not yet defined
-
-### ~Parameters~ Initial Conditions:
-- $N$: Size of grid;
-- a
-
-#### Agents:
-
-> values up for debate
-
-- Status: float (0 - 1);
-- range of "likeness" for satisfaction: floats (i.e. income - .25 ~ income + .25)
-- is_happy: boolean (if in sats. range => true)
-- **desired neighborhood size**
-- **radius**: how far you look for a neighbouthood?
-- time spent on current location?
+Before an agent's move, it tries to choose the best suited option within it's visible neighborhood, and upon choosing the best option, it applies for the Neighborhood, leading to a game being played where winning represents a reward when moving in (housewarming gift), and loosing, a 'fee' for not being accepted.
 
 ## Running:
+
+### Environment Config
+
+Configure the environment from the provided `pyproject.toml`. [`uv`](https://docs.astral.sh/uv/) is recommended.
+
+
+```shell
+uv sync
+```
 
 ### Web View (Solara)
 
 ```shell
-# from root folder
-solara run src/visualization/app.py
+# from root project folder
+solara run src/visualization/dashboard_framework.py
 # if it doesn't work, try:
-python -m solara run src/visualization/app.py
-# Maybe windows is different, if so, update this readme plz
+python -m solara run src/visualization/dashboard_framework.py
+# if it still doesn't work, try:
+PYTHONPATH=. python -m solara run src/visualization/dashboard_framework.py
 ```
 
 ### Profiling
@@ -53,8 +39,5 @@ python scripts/profile_model.py --steps 25 --warmup-steps 5 --profile-output pro
 The script prints a short run summary and a sorted cProfile table, and it also
 writes a raw `.prof` file that you can compare across runs.
 
-## Simulation Steps
+## Known Issues:
 
-### Initialize Grid
-###
-### Initialize Grid
