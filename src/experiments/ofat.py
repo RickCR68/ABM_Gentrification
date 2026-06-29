@@ -73,7 +73,7 @@ def run_single_simulation(task_info):
 
     beginning_time = time()
 
-    output_dir = Path(f"ofat_results/{param_name}/{param_value}/run_{run_idx}")
+    output_dir = Path(f"ofat_results_new/{param_name}/{param_value}/run_{run_idx}")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     model_output_file = output_dir / f"model_run_{run_idx}.csv"
