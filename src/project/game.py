@@ -152,41 +152,32 @@ class MeanResidentUtilityPolicy(
             .get_neighbors(candidate.cell)
         )
 
-        residents = [
-            resident
-            for resident in neighbors
-            if resident is not agent
-        ]
+        resident_count = 0
+        resident_utility_sum = 0.0
 
-        resident_utilities = [
-            float(resident.current_utility)
-            for resident in residents
-            if math.isfinite(
-                float(resident.current_utility)
-            )
-        ]
+        for resident in neighbors:
+            if resident is agent:
+                continue
 
-        if resident_utilities:
-            current_utility = float(
-                np.mean(resident_utilities)
-            )
+            utility = float(resident.current_utility)
+            if not math.isfinite(utility):
+                continue
+
+            resident_count += 1
+            resident_utility_sum += utility
+
+        if resident_count > 0:
+            current_utility = resident_utility_sum / resident_count
         else:
-            current_utility = (
-                self.empty_neighborhood_utility
-            )
+            current_utility = self.empty_neighborhood_utility
 
         applicant_utility = float(
             candidate.evaluation.utility
         )
 
-        updated_utility = float(
-            np.mean(
-                [
-                    *resident_utilities,
-                    applicant_utility,
-                ]
-            )
-        )
+        updated_utility = (
+            resident_utility_sum + applicant_utility
+        ) / (resident_count + 1)
 
         return NeighborhoodUtilityChange(
             current_utility=current_utility,
@@ -195,9 +186,7 @@ class MeanResidentUtilityPolicy(
                 updated_utility
                 - current_utility
             ),
-            resident_count=len(
-                resident_utilities
-            ),
+            resident_count=resident_count,
             applicant_utility=applicant_utility,
         )
 

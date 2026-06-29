@@ -75,21 +75,61 @@ class RandomSatisficingChoice(DestinationChoicePolicy):
         agent: SchellingAgent,
     ) -> DestinationCandidate | None:
         """Choose one random satisfactory destination."""
-        satisfactory_candidates = (
-            self.find_satisfactory_destinations(agent)
+        candidate_cells = self._get_candidate_cells(agent)
+
+        chosen_cell = None
+        chosen_evaluation = None
+        chosen_value_improvement = None
+        affordable_count = 0
+        satisfactory_count = 0
+
+        required_improvement = self._required_improvement(agent)
+        aspiration_utility = agent.current_value + required_improvement
+        utility_policy = agent.model.utility_policy
+
+        for cell in candidate_cells:
+            evaluation = utility_policy.evaluate_for_search(
+                agent=agent,
+                cell=cell,
+            )
+
+            if not evaluation.affordable:
+                continue
+
+            affordable_count += 1
+
+            if not math.isfinite(evaluation.value):
+                continue
+
+            value_improvement = evaluation.value - agent.current_value
+
+            if math.isinf(agent.current_utility) and agent.current_utility < 0.0:
+                value_improvement = math.inf
+            elif not math.isfinite(value_improvement):
+                continue
+
+            if evaluation.value < aspiration_utility:
+                continue
+
+            satisfactory_count += 1
+            if agent.model.random.randrange(satisfactory_count) == 0:
+                chosen_cell = cell
+                chosen_evaluation = evaluation
+                chosen_value_improvement = value_improvement
+
+        agent.last_search_summary = DestinationSearchSummary(
+            visible_cells=len(candidate_cells),
+            affordable_cells=affordable_count,
+            satisfactory_cells=satisfactory_count,
         )
 
-        if not satisfactory_candidates:
+        if chosen_cell is None:
             return None
-
-        chosen_cell, evaluation, value_improvement = agent.model.random.choice(
-            satisfactory_candidates
-        )
 
         return DestinationCandidate(
             cell=chosen_cell,
-            evaluation=evaluation,
-            value_improvement=value_improvement,
+            evaluation=chosen_evaluation,
+            value_improvement=chosen_value_improvement,
         )
 
     def find_satisfactory_destinations(

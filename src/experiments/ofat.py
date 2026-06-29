@@ -87,7 +87,10 @@ def run_single_simulation(task_info):
 
     # Save CSV outputs
     gm.datacollector.get_model_vars_dataframe().to_csv(model_output_file)
-    gm.datacollector.get_agent_vars_dataframe().to_csv(agent_output_file)
+    if KEEP_AGENTS:
+        gm.datacollector.get_agent_vars_dataframe().to_csv(agent_output_file)
+    else:
+        agent_output_file.touch()
 
     execution_time_seconds = time() - beginning_time
 
