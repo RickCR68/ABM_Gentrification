@@ -45,6 +45,9 @@ PYTHONPATH=. python -m solara run src/visualization/dashboard_framework.py
 # - .../visualization/dashboard_framework_v2.py
 ```
 
+> [!IMPORTANT]
+> The model present in `sec/project/experimental_models` is used in one visualization, but not in data/results generation, being only an experiment, as the file name suggests.
+
 ### Profiling
 
 Use the profiling script to compare runs or understand time spent on each step of the process:
