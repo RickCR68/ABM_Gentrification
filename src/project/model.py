@@ -141,7 +141,7 @@ class GentrificationModel(Model):
             qre_maximum_iterations=qre_maximum_iterations,
             qre_damping=qre_damping,
         )
-        
+
         self.keep_agents = keep_agents
 
         self.affordability_share = affordability_share
@@ -724,7 +724,6 @@ class GentrificationModel(Model):
         # 7. Record aggregate outputs.
         self.datacollector.collect(self)
 
-
     def percentage_satisfied(self) -> float:
         """Return the percentage of duration-satisfied households."""
         population = len(self.agents)
@@ -897,7 +896,7 @@ class GentrificationModel(Model):
                     "outcome": game_record.realized_game_outcome,
                 }
             )
-     
+
     def mean_qre_move_probability(self) -> float:
         if not self.game_records_this_step:
             return 0.0

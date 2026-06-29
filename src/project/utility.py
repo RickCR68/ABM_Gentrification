@@ -224,6 +224,8 @@ class IncomeNeighborhoodUtility(UtilityPolicy):
         self,
         agent: SchellingAgent,
         cell: Cell,
+        *,
+        compute_value: bool = True,
     ) -> LocationEvaluationSummary:
         """Evaluate a location using only the fields needed for search.
 
@@ -263,16 +265,40 @@ class IncomeNeighborhoodUtility(UtilityPolicy):
             ),
         )
 
-        value = self.apply_signed_crra(
-            utility=utility,
-            risk_aversion=agent.risk_aversion,
-        )
+        value = utility
+
+        if compute_value:
+            value = self.apply_signed_crra(
+                utility=utility,
+                risk_aversion=agent.risk_aversion,
+            )
 
         return LocationEvaluationSummary(
             affordable=affordable,
             utility=utility,
             value=value,
         )
+
+    @staticmethod
+    def invert_signed_crra(
+        value: float,
+        risk_aversion: float,
+    ) -> float:
+        """Convert a transformed value threshold back to raw utility.
+
+        This is used to compare candidate raw utility values during search
+        without calling the CRRA transform for every cell.
+        """
+        if not math.isfinite(value):
+            return value
+
+        if value == 0.0 or risk_aversion == 0.0:
+            return value
+
+        exponent = 1.0 / (1.0 - risk_aversion)
+        magnitude = abs(value) * abs(1.0 - risk_aversion)
+
+        return math.copysign(magnitude**exponent, value)
 
 
     @staticmethod

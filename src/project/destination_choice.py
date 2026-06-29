@@ -85,12 +85,17 @@ class RandomSatisficingChoice(DestinationChoicePolicy):
 
         required_improvement = self._required_improvement(agent)
         aspiration_utility = agent.current_value + required_improvement
+        raw_aspiration_utility = agent.model.utility_policy.invert_signed_crra(
+            aspiration_utility,
+            agent.risk_aversion,
+        )
         utility_policy = agent.model.utility_policy
 
         for cell in candidate_cells:
             evaluation = utility_policy.evaluate_for_search(
                 agent=agent,
                 cell=cell,
+                compute_value=False,
             )
 
             if not evaluation.affordable:
@@ -98,17 +103,17 @@ class RandomSatisficingChoice(DestinationChoicePolicy):
 
             affordable_count += 1
 
-            if not math.isfinite(evaluation.value):
+            if not math.isfinite(evaluation.utility):
                 continue
 
-            value_improvement = evaluation.value - agent.current_value
+            value_improvement = evaluation.utility - agent.current_value
 
             if math.isinf(agent.current_utility) and agent.current_utility < 0.0:
                 value_improvement = math.inf
             elif not math.isfinite(value_improvement):
                 continue
 
-            if evaluation.value < aspiration_utility:
+            if evaluation.utility < raw_aspiration_utility:
                 continue
 
             satisfactory_count += 1
@@ -126,9 +131,14 @@ class RandomSatisficingChoice(DestinationChoicePolicy):
         if chosen_cell is None:
             return None
 
+        full_evaluation = utility_policy.evaluate(
+            agent=agent,
+            cell=chosen_cell,
+        )
+
         return DestinationCandidate(
             cell=chosen_cell,
-            evaluation=chosen_evaluation,
+            evaluation=full_evaluation,
             value_improvement=chosen_value_improvement,
         )
 

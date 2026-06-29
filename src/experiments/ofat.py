@@ -6,8 +6,8 @@ from concurrent.futures import ProcessPoolExecutor
 from tqdm import tqdm
 from src.project.model import GentrificationModel
 
-RUNS_PER_SAMPLE = 20 # 10
-NUMBER_OF_CONTINUOUS_PARAMETER_VALUES = 16 # AKA N IN SOBOL
+RUNS_PER_SAMPLE = 60 # 10
+NUMBER_OF_CONTINUOUS_PARAMETER_VALUES = 10 # AKA N IN SOBOL
 STEPS_PER_RUN = 2000 # 200 at first then 2000
 MAX_WORKERS = os.cpu_count() or 1
 
@@ -73,7 +73,7 @@ def run_single_simulation(task_info):
 
     beginning_time = time()
 
-    output_dir = Path(f"results/{param_name}/{param_value}/run_{run_idx}")
+    output_dir = Path(f"ofat_results/{param_name}/{param_value}/run_{run_idx}")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     model_output_file = output_dir / f"model_run_{run_idx}.csv"
@@ -134,6 +134,49 @@ def batch_tasks(tasks, batch_size):
         yield tasks[start : start + batch_size]
 
 
+# if __name__ == "__main__":
+#     # 1. Map out the full pipeline task configurations
+#     tasks = []
+#     for p_name, p_values in parameters.items():
+#         for p_value in p_values:
+#             for i in range(RUNS_PER_SAMPLE):
+#                 tasks.append(
+#                     {"param_name": p_name, "param_value": p_value, "run_idx": i + 1}
+#                 )
+
+#     total_tasks = len(tasks)
+#     print(f"Generated {total_tasks} total simulation tasks.")
+#     print(
+#         f"Spawning Process Pool with {MAX_WORKERS} workers... (Sit back, utilizing all CPU cores)"
+#     )
+
+#     batch_size = max(1, total_tasks // (MAX_WORKERS * 4))
+#     task_batches = list(batch_tasks(tasks, batch_size))
+
+#     # 2. Distribute processes smoothly with an aggregated progress tracker
+#     with ProcessPoolExecutor(max_workers=MAX_WORKERS) as executor:
+#         with tqdm(
+#             total=total_tasks,
+#             desc="OFAT Iterations",
+#             unit="run",
+#             dynamic_ncols=True,
+#         ) as pbar:
+#             for batch_results in executor.map(run_task_batch, task_batches):
+#                 for result in batch_results:
+#                     if result[0] == "ok":
+#                         p_name, p_val, run = result[1]
+#                         pbar.set_postfix_str(f"{p_name}={p_val:.2f} (R{run})")
+#                     else:
+#                         task_info = result[1]
+#                         error_message = result[2]
+#                         print(
+#                             f"\nA worker thread errored out for {task_info['param_name']}={task_info['param_value']} "
+#                             f"(R{task_info['run_idx']}): {error_message}"
+#                         )
+#                     pbar.update(1)
+
+import concurrent.futures
+
 if __name__ == "__main__":
     # 1. Map out the full pipeline task configurations
     tasks = []
@@ -146,31 +189,36 @@ if __name__ == "__main__":
 
     total_tasks = len(tasks)
     print(f"Generated {total_tasks} total simulation tasks.")
-    print(
-        f"Spawning Process Pool with {MAX_WORKERS} workers... (Sit back, utilizing all CPU cores)"
-    )
+    print(f"Spawning Process Pool with {MAX_WORKERS} workers... (Sit back, utilizing all CPU cores)")
 
-    batch_size = max(1, total_tasks // (MAX_WORKERS * 4))
-    task_batches = list(batch_tasks(tasks, batch_size))
-
-    # 2. Distribute processes smoothly with an aggregated progress tracker
+    # 2. Distribute processes smoothly with an asynchronous progress tracker
     with ProcessPoolExecutor(max_workers=MAX_WORKERS) as executor:
+
+        # Submit tasks individually instead of in heavy chunks.
+        # This creates a dictionary mapping the Future object to its original task info
+        futures = {
+            executor.submit(run_single_simulation, task): task
+            for task in tasks
+        }
+
         with tqdm(
             total=total_tasks,
             desc="OFAT Iterations",
             unit="run",
             dynamic_ncols=True,
         ) as pbar:
-            for batch_results in executor.map(run_task_batch, task_batches):
-                for result in batch_results:
-                    if result[0] == "ok":
-                        p_name, p_val, run = result[1]
-                        pbar.set_postfix_str(f"{p_name}={p_val:.2f} (R{run})")
-                    else:
-                        task_info = result[1]
-                        error_message = result[2]
-                        print(
-                            f"\nA worker thread errored out for {task_info['param_name']}={task_info['param_value']} "
-                            f"(R{task_info['run_idx']}): {error_message}"
-                        )
-                    pbar.update(1)
+            # as_completed yields tasks the instant they finish, regardless of order
+            for future in concurrent.futures.as_completed(futures):
+                task_info = futures[future]
+                try:
+                    p_name, p_val, run = future.result()
+                    # Update the progress bar text with the most recently finished task
+                    pbar.set_postfix_str(f"{p_name}={p_val:.2f} (R{run})")
+                except Exception as exc:
+                    print(
+                        f"\nA worker thread errored out for {task_info['param_name']}={task_info['param_value']} "
+                        f"(R{task_info['run_idx']}): {exc}"
+                    )
+
+                # Tick the bar exactly once per finished simulation
+                pbar.update(1)
