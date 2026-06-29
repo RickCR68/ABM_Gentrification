@@ -16,10 +16,7 @@ profiles/
 .DS_Store
 
 # Results
-results/
-ofat_results/
-gsa_results/
-snellius_results/
+*results*/
 
 # profiling
 
